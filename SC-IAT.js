@@ -147,93 +147,93 @@ async function experimentInit() {
   // Initialize components for Routine "Intro"
   IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_1
+  // 1) 원본 이미지 파일 목록
+  // positive_images 변수를 중복 선언하지 않도록 let이 아닌 var로 선언하거나, 이미 상위 스코프에 선언되어 있다면 재선언하지 않습니다.
+  // 여기서는 var로 변경하여 중복 선언 오류를 방지합니다.
+  var positive_images = [
+    "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
+    "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
+    "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
+    "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
+  ];
+
+  // negative_images 변수를 중복 선언하지 않도록 let이 아닌 var로 선언하거나, 이미 상위 스코프에 선언되어 있다면 재선언하지 않습니다.
+  // 여기서는 var로 변경하여 중복 선언 오류를 방지합니다.
+  var negative_images = [
+    "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
+    "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
+    "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
+    "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
+  ];
+
+  // drug_images, total_trials, z_count 변수를 중복 선언하지 않도록 var로 선언하여 오류를 방지합니다.
+  var drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
+
+  // 2) 샘플링 수 설정
+  var total_trials = 24;
+  var z_count = Math.round(total_trials * 0.58);  // 14
+  var slash_count = total_trials - z_count;       // 10
   
-  public class StimulusSampling {
-      // 1) 자극 리스트
-      static List<String> positive_images = Arrays.asList(
-          "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-          "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-          "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-          "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-      );
+  // 3) 집단별 개수
+  var positive_z = 7;
+  var drug_z = z_count - positive_z;  // 7
+  var neg_slash = slash_count;        // 10
   
-      static List<String> negative_images = Arrays.asList(
-          "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-          "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-          "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-          "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-      );
+  // 4) 비복원추출 함수
+  function strict_sample(array, n) {
+    let copy = array.slice();  // 복제본
+    let result = [];
+    for (let i = 0; i < n; i++) {
+      let idx = Math.floor(Math.random() * copy.length);
+      result.push(copy.splice(idx, 1)[0]);
+    }
+    return result;
+  }
+
+  // 5) 샘플링하고 자극 풀 생성
+  // 이미 상위 스코프에 positive_sample, drug_sample, negative_sample이 선언되어 있을 수 있으므로, 중복 선언 오류를 방지하기 위해 let/var 없이 값을 재할당합니다.
+  positive_sample = strict_sample(positive_images, positive_z);
+  drug_sample = strict_sample(drug_images, drug_z);
+  negative_sample = strict_sample(negative_images, neg_slash);
+
+  // 자극 정보: [이미지 파일, 카테고리, 키]
+  // 이미 상위 스코프에 stimuli_pool이 선언되어 있을 수 있으므로, 중복 선언 오류를 방지하기 위해 let/var 없이 값을 재할당합니다.
+  stimuli_pool = [];
   
-      static List<String> drug_images = Arrays.asList(
-          "drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"
-      );
+  for (let img of positive_sample) {
+    stimuli_pool.push([img, "긍정", "z"]);
+  }
+  for (let img of drug_sample) {
+    stimuli_pool.push([img, "마약", "z"]);
+  }
+  for (let img of negative_sample) {
+    stimuli_pool.push([img, "부정", "/"]);
+  }
   
-      // Stimulus 구조체 역할
-      static class Stimulus {
-          String img;
-          String group;
-          String key;
-          Stimulus(String img, String group, String key) {
-              this.img = img;
-              this.group = group;
-              this.key = key;
-          }
+  // 6) 연속 중복 방지 셔플
+  function is_valid(seq) {
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i][0] === seq[i - 1][0]) {
+        return false;
       }
+    }
+    return true;
+  }
   
-      // (4) 비복원추출 함수
-      static List<String> strict_sample(List<String> images, int n, Random random) {
-          List<String> copy = new ArrayList<>(images);
-          Collections.shuffle(copy, random);
-          return copy.subList(0, n);
-      }
+  for (let i = 0; i < 1000; i++) {
+    // 셔플
+    for (let j = stimuli_pool.length - 1; j > 0; j--) {
+      let k = Math.floor(Math.random() * (j + 1));
+      [stimuli_pool[j], stimuli_pool[k]] = [stimuli_pool[k], stimuli_pool[j]];
+    }
   
-      // (6) 연속 중복 방지
-      static boolean is_valid(List<Stimulus> seq) {
-          for (int i = 1; i < seq.size(); i++) {
-              if (seq.get(i).img.equals(seq.get(i - 1).img)) {
-                  return false;
-              }
-          }
-          return true;
-      }
+    if (is_valid(stimuli_pool)) {
+      break;
+    }
+  }
   
-      public static void main(String[] args) {
-          int total_trials = 24;
-          int z_count = (int) Math.round(total_trials * 0.58);
-          int slash_count = total_trials - z_count;
-  
-          int positive_z = 7;
-          int drug_z = z_count - positive_z;
-          int neg_slash = slash_count;
-  
-          Random random = new Random();
-  
-          List<String> positive_sample = strict_sample(positive_images, positive_z, random);
-          List<String> drug_sample = strict_sample(drug_images, drug_z, random);
-          List<String> negative_sample = strict_sample(negative_images, neg_slash, random);
-  
-          List<Stimulus> stimuli_pool = new ArrayList<>();
-          for (String img : positive_sample) stimuli_pool.add(new Stimulus(img, "긍정", "z"));
-          for (String img : drug_sample)    stimuli_pool.add(new Stimulus(img, "마약", "z"));
-          for (String img : negative_sample)stimuli_pool.add(new Stimulus(img, "부정", "/"));
-  
-          boolean valid = false;
-          for (int i = 0; i < 1000; i++) {
-              Collections.shuffle(stimuli_pool, random);
-              if (is_valid(stimuli_pool)) {
-                  valid = true;
-                  break;
-              }
-          }
-          if (!valid) {
-              throw new RuntimeException("유효한 자극 배열 생성 실패");
-          }
-  
-          // 결과 출력 예시 (테스트용)
-          for (Stimulus s : stimuli_pool) {
-              System.out.println(s.img + ", " + s.group + ", " + s.key);
-          }
-      }
+  if (!is_valid(stimuli_pool)) {
+    throw new Error("유효한 자극 배열 생성 실패");
   }
   
   IntroText = new visual.TextStim({
@@ -345,96 +345,86 @@ async function experimentInit() {
   // Initialize components for Routine "Intro_2"
   Intro_2Clock = new util.Clock();
   // Run 'Begin Experiment' code from code_15
+  // 1) 원본 이미지 파일 목록
+  const positive_images = [
+    "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
+    "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
+    "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
+    "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
+  ];
   
-  public class Main {
-      // 1) 원본 이미지 파일 목록
-      static List<String> positive_images = Arrays.asList(
-          "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-          "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-          "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-          "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-      );
-      static List<String> negative_images = Arrays.asList(
-          "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-          "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-          "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-          "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-      );
-      static List<String> drug_images = Arrays.asList(
-          "drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"
-      ); // 총 7개
+  const negative_images = [
+    "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
+    "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
+    "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
+    "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
+  ];
   
-      // 자극 정보(이미지, 그룹, 키)
-      static class Stimulus {
-          String img;
-          String group;
-          String key;
-          Stimulus(String img, String group, String key) {
-              this.img = img;
-              this.group = group;
-              this.key = key;
-          }
-      }
+  const drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
   
-      // (4) 비복원추출 함수
-      static List<String> strict_sample(List<String> images, int n, Random rand) {
-          List<String> copy = new ArrayList<>(images);
-          Collections.shuffle(copy, rand);
-          return copy.subList(0, n);
-      }
+  // 2) 샘플링 수 설정
+  const total_trials = 24;
+  const z_count = Math.round(total_trials * 0.58); // 14
+  const slash_count = total_trials - z_count;      // 10
   
-      // (6) 연속 중복 방지
-      static boolean is_valid(List<Stimulus> seq) {
-          for (int i = 1; i < seq.size(); i++) {
-              if (seq.get(i).img.equals(seq.get(i-1).img)) {
-                  return false;
-              }
-          }
-          return true;
-      }
+  // 3) 집단별 개수
+  const positive_z = 7;
+  const drug_z = z_count - positive_z;  // 7
+  const neg_slash = slash_count;        // 10 (부정 전부 slash)
   
-      public static void main(String[] args) {
-          // (2) 샘플링 수 설정
-          int total_trials = 24;
-          int z_count = (int) Math.round(total_trials * 0.58); // 14
-          int slash_count = total_trials - z_count;            // 10
-  
-          // (3) 집단별 개수
-          int positive_z = 7;
-          int drug_z     = z_count - positive_z;               // 7
-          int neg_slash  = slash_count;                        // 10
-  
-          Random rand = new Random();
-  
-          // (5) 샘플링하고 자극 풀 생성
-          List<String> positive_sample = strict_sample(positive_images, positive_z, rand);
-          List<String> drug_sample     = strict_sample(drug_images,     drug_z, rand);
-          List<String> negative_sample = strict_sample(negative_images, neg_slash, rand);
-  
-          List<Stimulus> stimuli_pool = new ArrayList<>();
-          for (String img : positive_sample) stimuli_pool.add(new Stimulus(img, "긍정", "z"));
-          for (String img : drug_sample)    stimuli_pool.add(new Stimulus(img, "마약", "z"));
-          for (String img : negative_sample)stimuli_pool.add(new Stimulus(img, "부정", "/"));
-  
-          // (6) 연속 중복 방지 셔플
-          boolean valid = false;
-          for (int i = 0; i < 1000; i++) {
-              Collections.shuffle(stimuli_pool, rand);
-              if (is_valid(stimuli_pool)) {
-                  valid = true;
-                  break;
-              }
-          }
-          if (!valid) {
-              throw new RuntimeException("유효한 자극 배열 생성 실패");
-          }
-  
-          // (출력 예시)
-          for (Stimulus s : stimuli_pool) {
-              System.out.println(s.img + ", " + s.group + ", " + s.key);
-          }
-      }
+  // 4) 비복원추출 함수 (Python random.sample 대체)
+  function strictSample(arr, n) {
+    if (n > arr.length) {
+      throw new Error("샘플링 개수가 배열 길이보다 큽니다.");
+    }
+    const arrCopy = [...arr];
+    const result = [];
+    for (let i = 0; i < n; i++) {
+      const idx = Math.floor(Math.random() * arrCopy.length);
+      result.push(arrCopy.splice(idx, 1)[0]);
+    }
+    return result;
   }
+  
+  // 5) 샘플링하고 자극 풀 생성
+  const positive_sample = strictSample(positive_images, positive_z);
+  const drug_sample = strictSample(drug_images, drug_z);
+  const negative_sample = strictSample(negative_images, neg_slash);
+  
+  let stimuli_pool = [
+    ...positive_sample.map(img => [img, '긍정', 'z']),
+    ...drug_sample.map(img => [img, '마약', 'z']),
+    ...negative_sample.map(img => [img, '부정', '/'])
+  ];
+  
+  // 6) 연속 중복 방지 셔플
+  function isValid(seq) {
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i][0] === seq[i-1][0]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  let valid = false;
+  for (let i = 0; i < 1000; i++) {
+    for (let j = stimuli_pool.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [stimuli_pool[j], stimuli_pool[k]] = [stimuli_pool[k], stimuli_pool[j]];
+    }
+    if (isValid(stimuli_pool)) {
+      valid = true;
+      break;
+    }
+  }
+  
+  if (!valid) {
+    throw new Error("유효한 자극 배열 생성 실패");
+  }
+  
+  // 결과 출력(확인용)
+  console.log(stimuli_pool);
   
   IntroText_2 = new visual.TextStim({
     win: psychoJS.window,
@@ -477,55 +467,43 @@ async function experimentInit() {
   // Initialize components for Routine "General_Intro"
   General_IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_14
+  // 1) 원본 이미지 파일 목록
+  const positive_images = [
+    "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
+    "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
+    "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
+    "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
+  ];
   
-  public class Main {
-      static List<String> positive_images = Arrays.asList(
-          "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-          "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-          "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-          "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-      );
-      static List<String> negative_images = Arrays.asList(
-          "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-          "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-          "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-          "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-      );
-      static List<String> drug_images = Arrays.asList(
-          "drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"
-      );
+  const negative_images = [
+    "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
+    "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
+    "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
+    "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
+  ];
   
-      // (3) 비복원추출 함수 (예외처리 포함)
-      static List<String> strict_sample(List<String> images, int n, Random rand) {
-          if (n < 0 || n > images.size()) {
-              throw new IllegalArgumentException("요청 " + n + "개, 가능 " + images.size() + "개");
-          }
-          List<String> copy = new ArrayList<>(images);
-          Collections.shuffle(copy, rand);
-          return copy.subList(0, n);
-      }
+  const drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
   
-      public static void main(String[] args) {
-          // (2) 블록별 샘플링 개수 고정
-          int total_trials = 24;
-          int z_count      = (int) Math.round(total_trials * 0.58); // 14
-          int slash_count  = total_trials - z_count;                // 10
-          int positive_z   = 7;
-          int drug_z       = z_count - positive_z;                  // 7
-          int neg_slash    = slash_count;                           // 10
+  // 2) 블록별 샘플링 개수 고정
+  const total_trials = 24;
+  const z_count = Math.round(total_trials * 0.58);  // 14
+  const slash_count = total_trials - z_count;       // 10
+  const positive_z = 7;
+  const drug_z = z_count - positive_z;              // 7
+  const neg_slash = slash_count;                     // 10
   
-          Random rand = new Random();
-  
-          // 샘플링 예시
-          List<String> positive_sample = strict_sample(positive_images, positive_z, rand);
-          List<String> drug_sample     = strict_sample(drug_images,     drug_z, rand);
-          List<String> negative_sample = strict_sample(negative_images, neg_slash, rand);
-  
-          // 결과 출력 예시
-          System.out.println("Positive: " + positive_sample);
-          System.out.println("Drug: " + drug_sample);
-          System.out.println("Negative: " + negative_sample);
-      }
+  // 3) 비복원 추출 함수
+  function strictSample(arr, n) {
+    if (n < 0 || n > arr.length) {
+      throw new Error(`요청 ${n}개, 가능 ${arr.length}개`);
+    }
+    let arrCopy = [...arr];
+    let result = [];
+    for (let i = 0; i < n; i++) {
+      const idx = Math.floor(Math.random() * arrCopy.length);
+      result.push(arrCopy.splice(idx, 1)[0]);
+    }
+    return result;
   }
   
   // Initialize components for Routine "SetupRoutine"
@@ -639,68 +617,7 @@ async function experimentInit() {
   key_resp_intro_3 = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
   // Run 'Begin Experiment' code from code_8
-  // --- Intro_3: Begin Experiment 탭 (PsychoJS 코드) ---
-  
-  // … positive_images, negative_images, drug_images는 미리 선언되어 있다고 가정 …
-  
-  // ② 샘플링 비율 및 개수 설정
-  let total_trials_3   = 24;
-  let z_ratio_3        = 0.42;
-  let z_count_3        = Math.round(total_trials_3 * z_ratio_3); // 10
-  let slash_count_3    = total_trials_3 - z_count_3;             // 14
-  let positive_z_3     = 10;
-  let negative_slash_3 = 7;
-  let drug_slash_3     = slash_count_3 - negative_slash_3;       // 7
-  
-  // ③ strict_sample 함수 정의
-  function strict_sample(images, n) {
-      if (images.length < n) {
-          throw "자극이 부족합니다: " + images.length + "개 중 " + n + "개 요청됨";
-      }
-      let copy = images.slice();
-      util.shuffle(copy);
-      return copy.slice(0, n);
-  }
-  
-  // ④ 샘플링
-  let positive_sample_3 = strict_sample(positive_images, positive_z_3);
-  let drug_sample_3     = strict_sample(drug_images,     drug_slash_3);
-  let negative_sample_3 = strict_sample(negative_images, negative_slash_3);
-  
-  // ⑤ stimuli_pool_3 구성
-  let stimuli_pool_3 = [];
-  for (let i = 0; i < positive_sample_3.length; i++) {
-      stimuli_pool_3.push([positive_sample_3[i], '긍정', 'z']);
-  }
-  for (let i = 0; i < drug_sample_3.length; i++) {
-      stimuli_pool_3.push([drug_sample_3[i], '마약', '/']);
-  }
-  for (let i = 0; i < negative_sample_3.length; i++) {
-      stimuli_pool_3.push([negative_sample_3[i], '부정', '/']);
-  }
-  
-  // ⑥ 셔플 (연속 중복 방지)
-  function is_valid_sequence(seq) {
-      for (let i = 1; i < seq.length; i++) {
-          if (seq[i][0] === seq[i-1][0]) {
-              return false;
-          }
-      }
-      return true;
-  }
-  
-  let valid = false;
-  for (let i = 0; i < 1000; i++) {
-      util.shuffle(stimuli_pool_3);
-      if (is_valid_sequence(stimuli_pool_3)) {
-          valid = true;
-          break;
-      }
-  }
-  if (!valid) {
-      throw "유효한 자극 배열 생성 실패";
-  }
-  
+  /* Syntax Error: Fix Python code */
   // Initialize components for Routine "trial_3"
   trial_3Clock = new util.Clock();
   image_stim_3 = new visual.ImageStim({
@@ -797,77 +714,6 @@ async function experimentInit() {
   
   key_resp_intro_4 = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
-  // Run 'Begin Experiment' code from code
-  // 1) 이미지 파일 목록
-  let positive_images = [
-      "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-      "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-      "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-      "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-  ];
-  let negative_images = [
-      "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-      "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-      "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-      "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-  ];
-  let drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
-  
-  // (2) 샘플링 수 설정
-  let total_trials_4   = 24;
-  let z_ratio_4        = 0.42;
-  let z_count_4        = Math.round(total_trials_4 * z_ratio_4);
-  let slash_count_4    = total_trials_4 - z_count_4;
-  let positive_z_4     = 10;
-  let negative_slash_4 = 7;
-  let drug_slash_4     = slash_count_4 - negative_slash_4;
-  
-  // (4) 비복원추출 함수 (PsychoJS util.shuffle)
-  function strict_sample(images, n) {
-      let copy = images.slice();
-      util.shuffle(copy);
-      return copy.slice(0, n);
-  }
-  
-  // ④ 샘플링
-  let positive_sample_4 = strict_sample(positive_images, positive_z_4);
-  let drug_sample_4     = strict_sample(drug_images,     drug_slash_4);
-  let negative_sample_4 = strict_sample(negative_images, negative_slash_4);
-  
-  // ⑤ stimuli_pool_3 구성 (튜플 → 배열)
-  let stimuli_pool_3 = [];
-  for (let i = 0; i < positive_sample_4.length; i++) {
-      stimuli_pool_3.push([positive_sample_4[i], '긍정', 'z']);
-  }
-  for (let i = 0; i < drug_sample_4.length; i++) {
-      stimuli_pool_3.push([drug_sample_4[i], '마약', '/']);
-  }
-  for (let i = 0; i < negative_sample_4.length; i++) {
-      stimuli_pool_3.push([negative_sample_4[i], '부정', '/']);
-  }
-  
-  // (6) 연속 중복 방지 셔플
-  function is_valid(seq) {
-      for (let i = 1; i < seq.length; i++) {
-          if (seq[i][0] === seq[i-1][0]) {
-              return false;
-          }
-      }
-      return true;
-  }
-  
-  let valid = false;
-  for (let i = 0; i < 1000; i++) {
-      util.shuffle(stimuli_pool_3);
-      if (is_valid(stimuli_pool_3)) {
-          valid = true;
-          break;
-      }
-  }
-  if (!valid) {
-      throw "유효한 자극 배열 생성 실패";
-  }
-  
   IntroText_4 = new visual.TextStim({
     win: psychoJS.window,
     name: 'IntroText_4',
@@ -882,40 +728,6 @@ async function experimentInit() {
   
   // Initialize components for Routine "General_Intro_2"
   General_Intro_2Clock = new util.Clock();
-  // Run 'Begin Experiment' code from code_16
-  // 1) 이미지 파일 목록
-  let positive_images = [
-      "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-      "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-      "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-      "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-  ];
-  let negative_images = [
-      "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-      "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-      "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-      "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-  ];
-  let drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
-  
-  // (2) 블록별 샘플링 개수 고정
-  let total_trials = 24;
-  let z_count      = Math.round(total_trials * 0.42);  // 10
-  let slash_count  = total_trials - z_count;           // 14
-  let positive_z   = 10;
-  let neg_slash    = 7;    // (이 변수 누락되어 있어서 추가)
-  let drug_slash   = slash_count - neg_slash;  // 7
-  
-  // (3) 비복원추출 함수
-  function strict_sample(images, n) {
-      if (n < 0 || n > images.length) {
-          throw "요청 " + n + "개, 가능 " + images.length + "개";
-      }
-      let copy = images.slice();
-      util.shuffle(copy); // PsychoJS 환경에서 사용
-      return copy.slice(0, n);
-  }
-  
   // Initialize components for Routine "SetupRoutine_2"
   SetupRoutine_2Clock = new util.Clock();
   // Initialize components for Routine "trial_4"
@@ -1021,11 +833,6 @@ function IntroRoutineBegin(snapshot) {
     routineTimer.reset();
     IntroMaxDurationReached = false;
     // update component parameters for each repeat
-    message = "";
-    fb_color = "white";
-    fb_duration = 0.0;
-    fb_size = 0.06;
-    
     key_resp_intro.keys = undefined;
     key_resp_intro.rt = undefined;
     _key_resp_intro_allKeys = [];
@@ -1691,14 +1498,18 @@ function trial_1RoutineEnd(snapshot) {
     }
     psychoJS.experiment.addData('trial_1.stopped', globalClock.getTime());
     // Run 'End Routine' code from code_2
-    // End Routine
-    if ((key_resp_1.keys === 'slash')) {
+    // 슬래시 키 정규화
+    if (key_resp_1.keys === 'slash') {
         key_resp_1.keys = '/';
     }
+    
+    // 정오 판단
     key_resp_1.corr = (key_resp_1.keys === this_key) ? 1 : 0;
+    
+    // 데이터 저장
     psychoJS.experiment.addData('stimulus', this_img);
     psychoJS.experiment.addData('category', this_category);
-    psychoJS.experiment.addData('correct', key_resp_1.corr);
+    psychoJS.experiment.addData('correct',  key_resp_1.corr);
     
     // was no response the correct answer?!
     if (key_resp_1.keys === undefined) {
@@ -1746,23 +1557,27 @@ function feedbackRoutineBegin(snapshot) {
     feedbackMaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_3
-    if ((key_resp_1.keys && key_resp_1.rt > 1.5)) {
-        message = '더 빠르게 해주세요';
-        fb_color = 'white';
+    let message;
+    let fb_color;
+    let fb_size;
+    let fb_duration;
+    if (key_resp_1.keys != null && key_resp_1.rt > 1.5) {
+        message = "더 빠르게 해주세요";
+        fb_color = "white";
         fb_size = 0.06;
         fb_duration = 0.5;
-    } else if (key_resp_1.corr === 1) {
-        message = 'O';
-        fb_color = 'green';
+    } else if (key_resp_1.corr == 1) {
+        message = "O";
+        fb_color = "green";
         fb_size = 0.1;
         fb_duration = 0.15;
     } else {
-        message = 'X';
-        fb_color = 'red';
+        message = "X";
+        fb_color = "red";
         fb_size = 0.1;
         fb_duration = 0.15;
     }
-     
+    
     msg_feedback_1.setColor(new util.Color(fb_color));
     msg_feedback_1.setText(message);
     msg_feedback_1.setHeight(fb_size);
@@ -2070,7 +1885,6 @@ function General_IntroRoutineEnd(snapshot) {
       }
     }
     psychoJS.experiment.addData('General_Intro.stopped', globalClock.getTime());
-    /* Syntax Error: Fix Python code */
     // the Routine "General_Intro" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -2095,63 +1909,65 @@ function SetupRoutineRoutineBegin(snapshot) {
     SetupRoutineMaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_4
-    // SetupRoutine · Begin Routine 탭 (PsychoJS 코드)
+    // (2) 블록 2 샘플링 개수 (trial_2)
+    const total_trials_2 = 24;
+    const z_count_2 = Math.round(total_trials_2 * 0.58);  // 14
+    const slash_count_2 = total_trials_2 - z_count_2;    // 10
+    const positive_z_2 = 7;
+    const drug_z_2 = z_count_2 - positive_z_2;           // 7
+    const neg_slash_2 = slash_count_2;                    // 10
     
-    // (2) 블록 2 샘플링 개수
-    let total_trials_2   = 24;
-    let z_count_2        = Math.round(total_trials_2 * 0.58); // 14
-    let slash_count_2    = total_trials_2 - z_count_2;        // 10
-    let positive_z_2     = 7;
-    let drug_z_2         = z_count_2 - positive_z_2;          // 7
-    let neg_slash_2      = slash_count_2;                     // 10
-    
-    // (3) 비복원추출 함수 (PsychoJS util.shuffle 사용)
-    function strict_sample(images, n) {
-        if (n < 0 || n > images.length) {
-            throw "샘플 개수 오류: 요청 " + n + ", 가능 " + images.length;
-        }
-        let copy = images.slice();
-        util.shuffle(copy); // PsychoJS util
-        return copy.slice(0, n);
+    // (3) 비복원 추출 함수
+    function strictSample(images, n) {
+      if (n < 0 || n > images.length) {
+        throw new Error(`샘플 개수 오류: 요청 ${n}, 가능 ${images.length}`);
+      }
+      const arrCopy = [...images];
+      const result = [];
+      for (let i = 0; i < n; i++) {
+        const idx = Math.floor(Math.random() * arrCopy.length);
+        result.push(arrCopy.splice(idx, 1)[0]);
+      }
+      return result;
     }
     
     // (4) 샘플링
-    let positive_sample_2 = strict_sample(positive_images, positive_z_2);
-    let drug_sample_2     = strict_sample(drug_images,     drug_z_2);
-    let negative_sample_2 = strict_sample(negative_images, neg_slash_2);
+    const positive_sample_2 = strictSample(positive_images, positive_z_2);
+    const drug_sample_2 = strictSample(drug_images, drug_z_2);
+    const negative_sample_2 = strictSample(negative_images, neg_slash_2);
     
     // (5) stimuli_pool_2 전역 변수로 할당
-    let stimuli_pool_2 = [];
-    for (let i = 0; i < positive_sample_2.length; i++) {
-        stimuli_pool_2.push([positive_sample_2[i], '긍정', 'z']);
-    }
-    for (let i = 0; i < drug_sample_2.length; i++) {
-        stimuli_pool_2.push([drug_sample_2[i], '마약', 'z']);
-    }
-    for (let i = 0; i < negative_sample_2.length; i++) {
-        stimuli_pool_2.push([negative_sample_2[i], '부정', '/']);
-    }
+    let stimuli_pool_2 = [
+      ...positive_sample_2.map(img => [img, '긍정', 'z']),
+      ...drug_sample_2.map(img => [img, '마약', 'z']),
+      ...negative_sample_2.map(img => [img, '부정', '/'])
+    ];
     
-    // (6) 연속 중복 방지 셔플
-    function is_valid_sequence(seq) {
-        for (let i = 1; i < seq.length; i++) {
-            if (seq[i][0] === seq[i-1][0]) {
-                return false;
-            }
+    // (6) 중복 방지 셔플
+    function isValidSequence(seq) {
+      for (let i = 1; i < seq.length; i++) {
+        if (seq[i][0] === seq[i - 1][0]) {
+          return false;
         }
-        return true;
+      }
+      return true;
     }
     
     let valid = false;
     for (let i = 0; i < 1000; i++) {
-        util.shuffle(stimuli_pool_2);
-        if (is_valid_sequence(stimuli_pool_2)) {
-            valid = true;
-            break;
-        }
+      // Fisher-Yates shuffle
+      for (let j = stimuli_pool_2.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [stimuli_pool_2[j], stimuli_pool_2[k]] = [stimuli_pool_2[k], stimuli_pool_2[j]];
+      }
+      if (isValidSequence(stimuli_pool_2)) {
+        valid = true;
+        break;
+      }
     }
+    
     if (!valid) {
-        throw "유효한 자극 배열 생성 실패";
+      throw new Error("유효한 자극 배열 생성 실패");
     }
     
     psychoJS.experiment.addData('SetupRoutine.started', globalClock.getTime());
@@ -2208,7 +2024,6 @@ function SetupRoutineRoutineEnd(snapshot) {
       }
     }
     psychoJS.experiment.addData('SetupRoutine.stopped', globalClock.getTime());
-    /* Syntax Error: Fix Python code */
     // the Routine "SetupRoutine" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -2395,22 +2210,6 @@ function trial_2RoutineEnd(snapshot) {
         }
     
     key_resp_2.stop();
-    // Run 'End Routine' code from code_6
-    // trial_2 · End Routine
-    
-    if (key_resp_2.keys === 'slash') {
-        key_resp_2.keys = '/';
-    }
-    
-    key_resp_2.corr = (key_resp_2.keys === this_key2) ? 1 : 0;
-    
-    psychoJS.experiment.addData('stimulus', this_img2);
-    psychoJS.experiment.addData('category', this_category2);
-    psychoJS.experiment.addData('correct', this_key2);
-    psychoJS.experiment.addData('response', key_resp_2.keys);
-    psychoJS.experiment.addData('rt', key_resp_2.rt);
-    psychoJS.experiment.addData('corr', key_resp_2.corr);
-    
     // the Routine "trial_2" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -2435,21 +2234,14 @@ function feedback_2RoutineBegin(snapshot) {
     feedback_2MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_7
-    if (key_resp_2.keys && key_resp_2.rt > 1.5) {
-        message = '더 빠르게 해주세요';
-        fb_color = 'white';
-        fb_size = 0.06;
-        fb_duration = 0.5;
-    } else if (key_resp_2.corr === 1) {
-        message = 'O';
-        fb_color = 'green';
-        fb_size = 0.1;
-        fb_duration = 0.15;
+    if ((key_resp_2.keys && (key_resp_2.rt > 1.5))) {
+        [message, fb_color, fb_size, fb_duration] = ["\ub354 \ube60\ub974\uac8c \ud574\uc8fc\uc138\uc694", "white", 0.06, 0.5];
     } else {
-        message = 'X';
-        fb_color = 'red';
-        fb_size = 0.1;
-        fb_duration = 0.15;
+        if ((key_resp_2.corr === 1)) {
+            [message, fb_color, fb_size, fb_duration] = ["O", "green", 0.1, 0.15];
+        } else {
+            [message, fb_color, fb_size, fb_duration] = ["X", "red", 0.1, 0.15];
+        }
     }
     
     msg_feedback_2.setColor(new util.Color(fb_color));
@@ -2709,25 +2501,12 @@ function trial_3RoutineBegin(snapshot) {
     key_resp_3.rt = undefined;
     _key_resp_3_allKeys = [];
     // Run 'Begin Routine' code from code_9
-    // trial_3 · Begin Routine
-    
-    if (stimuli_pool_3.length === 0) {
+    if ((trials.thisN >= 24)) {
         continueRoutine = false;
-    } else {
-        // JS에서는 pop(0) == shift()
-        let trial3info = stimuli_pool_3.shift();
-        this_img3 = trial3info[0];
-        this_category3 = trial3info[1];
-        // _ = trial3info[2]; // 사용하지 않음
-    
-        // trial3/4 매핑: 긍정 → 'z', 마약·부정 → '/'
-        if (this_category3 === '긍정') {
-            correct_key3 = 'z';
-        } else {
-            correct_key3 = '/';
-        }
-        image_stim_3.setImage('images/' + this_img3);
     }
+    [stimulus_file, stim_category] = stimuli_pool[stim_index];
+    stim_index += 1;
+    image_stim.setImage(("images/" + stimulus_file));
     
     psychoJS.experiment.addData('trial_3.started', globalClock.getTime());
     trial_3MaxDuration = null
@@ -2881,22 +2660,6 @@ function trial_3RoutineEnd(snapshot) {
         }
     
     key_resp_3.stop();
-    // Run 'End Routine' code from code_9
-    // trial_3 · End Routine
-    
-    if (key_resp_3.keys === 'slash') {
-        key_resp_3.keys = '/';
-    }
-    
-    key_resp_3.corr = (key_resp_3.keys === correct_key3) ? 1 : 0;
-    
-    psychoJS.experiment.addData('stimulus', this_img3);
-    psychoJS.experiment.addData('category', this_category3);
-    psychoJS.experiment.addData('correct', correct_key3);
-    psychoJS.experiment.addData('response', key_resp_3.keys);
-    psychoJS.experiment.addData('rt', key_resp_3.rt);
-    psychoJS.experiment.addData('corr', key_resp_3.corr);
-    
     // the Routine "trial_3" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -2921,30 +2684,7 @@ function feedback_3RoutineBegin(snapshot) {
     feedback_3MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_10
-    if (key_resp_3.keys) {  // 반응이 있었을 경우
-        if (key_resp_3.rt !== null && key_resp_3.rt > 1.5) {
-            message = '더 빠르게 해주세요';
-            fb_color = 'white';
-            fb_duration = 0.5;
-            fb_size = 0.06;  // 작게
-        } else if (key_resp_3.corr === 1) {
-            message = 'O';
-            fb_color = 'green';
-            fb_duration = 0.15;
-            fb_size = 0.1;  // 크게
-        } else if (key_resp_3.corr === 0) {
-            message = 'X';
-            fb_color = 'red';
-            fb_duration = 0.15;
-            fb_size = 0.1;  // 크게
-        }
-    } else {  // 반응이 없었을 때
-        message = '더 빠르게 해주세요';
-        fb_color = 'white';
-        fb_duration = 0.5;
-        fb_size = 0.06;  // 작게
-    }
-    
+    /* Syntax Error: Fix Python code */
     msg_feedback.setColor(new util.Color(fb_color));
     msg_feedback.setText(message);
     msg_feedback.setHeight(fb_size);
@@ -3284,64 +3024,10 @@ function SetupRoutine_2RoutineBegin(snapshot) {
     SetupRoutine_2MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_17
-    // SetupRoutine · Begin Routine (PsychoJS 코드)
-    
-    // (2) 블록 2 샘플링 개수 (trial_4)
-    let total_trials_4   = 24;
-    let z_count_4        = Math.round(total_trials_4 * 0.42);  // 10
-    let slash_count_4    = total_trials_4 - z_count_4;         // 14
-    let positive_z_4     = 10;
-    let drug_z_4         = slash_count_4 - positive_z_4;       // 4
-    let neg_slash_4      = 10;                                 // 변수 혼동 주의!
-    
-    // (3) 비복원추출 함수
-    function strict_sample(images, n) {
-        if (n < 0 || n > images.length) {
-            throw "샘플 개수 오류: 요청 " + n + ", 가능 " + images.length + "개";
-        }
-        let copy = images.slice();
-        util.shuffle(copy);  // PsychoJS util 함수
-        return copy.slice(0, n);
-    }
-    
-    // (4) 샘플링
-    let positive_sample_4 = strict_sample(positive_images, positive_z_4);
-    let drug_sample_4     = strict_sample(drug_images,     drug_z_4);
-    let negative_sample_4 = strict_sample(negative_images, neg_slash_4);
-    
-    // (5) stimuli_pool_3 전역 변수로 할당
-    let stimuli_pool_3 = [];
-    for (let i = 0; i < positive_sample_4.length; i++) {
-        stimuli_pool_3.push([positive_sample_4[i], '긍정', 'z']);
-    }
-    for (let i = 0; i < drug_sample_4.length; i++) {
-        stimuli_pool_3.push([drug_sample_4[i], '마약', '/']);
-    }
-    for (let i = 0; i < negative_sample_4.length; i++) {
-        stimuli_pool_3.push([negative_sample_4[i], '부정', '/']);
-    }
-    
-    // (6) 중복 방지 셔플
-    function is_valid_sequence(seq) {
-        for (let i = 1; i < seq.length; i++) {
-            if (seq[i][0] === seq[i-1][0]) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    let valid = false;
-    for (let i = 0; i < 1000; i++) {
-        util.shuffle(stimuli_pool_3);
-        if (is_valid_sequence(stimuli_pool_3)) {
-            valid = true;
-            break;
-        }
-    }
-    if (!valid) {
-        throw "유효한 자극 배열 생성 실패";
-    }
+    message = "";
+    fb_color = "white";
+    fb_duration = 0.0;
+    fb_size = 0.06;
     
     psychoJS.experiment.addData('SetupRoutine_2.started', globalClock.getTime());
     SetupRoutine_2MaxDuration = null
@@ -3425,23 +3111,12 @@ function trial_4RoutineBegin(snapshot) {
     key_resp_4.rt = undefined;
     _key_resp_4_allKeys = [];
     // Run 'Begin Routine' code from code_12
-    if (stimuli_pool_3.length === 0) {
+    if ((trials.thisN >= 24)) {
         continueRoutine = false;
-    } else {
-        // Python pop(0)은 JS의 shift()와 동일
-        let trial4info = stimuli_pool_3.shift();
-        this_img4 = trial4info[0];
-        this_category4 = trial4info[1];
-        // _ = trial4info[2]; // 사용하지 않음
-    
-        // trial3/4 매핑: 긍정 → 'z', 마약·부정 → '/'
-        if (this_category4 === '긍정') {
-            correct_key4 = 'z';
-        } else {
-            correct_key4 = '/';
-        }
-        image_stim_4.setImage('images/' + this_img4);
     }
+    [stimulus_file, stim_category] = stimuli_pool[stim_index];
+    stim_index += 1;
+    image_stim.setImage(("images/" + stimulus_file));
     
     psychoJS.experiment.addData('trial_4.started', globalClock.getTime());
     trial_4MaxDuration = null
@@ -3595,20 +3270,6 @@ function trial_4RoutineEnd(snapshot) {
         }
     
     key_resp_4.stop();
-    // Run 'End Routine' code from code_12
-    if (key_resp_4.keys === 'slash') {
-        key_resp_4.keys = '/';
-    }
-    
-    key_resp_4.corr = (key_resp_4.keys === correct_key4) ? 1 : 0;
-    
-    psychoJS.experiment.addData('stimulus', this_img4);
-    psychoJS.experiment.addData('category', this_category4);
-    psychoJS.experiment.addData('correct', correct_key4);
-    psychoJS.experiment.addData('response', key_resp_4.keys);
-    psychoJS.experiment.addData('rt', key_resp_4.rt);
-    psychoJS.experiment.addData('corr', key_resp_4.corr);
-    
     // the Routine "trial_4" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
