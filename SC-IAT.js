@@ -1,7 +1,3 @@
-﻿/*************** 
- * Sc-Iat *
- ***************/
-
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2024.2.4.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
@@ -150,7 +146,7 @@ async function experimentInit() {
   // 1) 원본 이미지 파일 목록
   // positive_images 변수를 중복 선언하지 않도록 let이 아닌 var로 선언하거나, 이미 상위 스코프에 선언되어 있다면 재선언하지 않습니다.
   // 여기서는 var로 변경하여 중복 선언 오류를 방지합니다.
-  var positive_images = [
+  const positive_images = [
     "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
     "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
     "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
@@ -159,7 +155,7 @@ async function experimentInit() {
 
   // negative_images 변수를 중복 선언하지 않도록 let이 아닌 var로 선언하거나, 이미 상위 스코프에 선언되어 있다면 재선언하지 않습니다.
   // 여기서는 var로 변경하여 중복 선언 오류를 방지합니다.
-  var negative_images = [
+  const negative_images = [
     "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
     "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
     "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
@@ -167,24 +163,24 @@ async function experimentInit() {
   ];
 
   // drug_images, total_trials, z_count 변수를 중복 선언하지 않도록 var로 선언하여 오류를 방지합니다.
-  var drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
+  const drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
 
   // 2) 샘플링 수 설정
-  var total_trials = 24;
-  var z_count = Math.round(total_trials * 0.58);  // 14
-  var slash_count = total_trials - z_count;       // 10
+  const total_trials = 24;
+  const z_count = Math.round(total_trials * 0.58);  // 14
+  const slash_count = total_trials - z_count;       // 10
   
   // 3) 집단별 개수
-  var positive_z = 7;
-  var drug_z = z_count - positive_z;  // 7
-  var neg_slash = slash_count;        // 10
+  const positive_z = 7;
+  const drug_z = z_count - positive_z;  // 7
+  const neg_slash = slash_count;        // 10
   
   // 4) 비복원추출 함수
   function strict_sample(array, n) {
-    let copy = array.slice();  // 복제본
-    let result = [];
-    for (let i = 0; i < n; i++) {
-      let idx = Math.floor(Math.random() * copy.length);
+    const copy = array.slice();  // 복제본
+    const result = [];
+    for (const i = 0; i < n; i++) {
+      const idx = Math.floor(Math.random() * copy.length);
       result.push(copy.splice(idx, 1)[0]);
     }
     return result;
@@ -346,31 +342,31 @@ async function experimentInit() {
   Intro_2Clock = new util.Clock();
   // Run 'Begin Experiment' code from code_15
   // 1) 원본 이미지 파일 목록
-  const positive_images = [
+  positive_images = [
     "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
     "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
     "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
     "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
   ];
   
-  const negative_images = [
+   negative_images = [
     "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
     "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
     "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
     "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
   ];
   
-  const drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
+  drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
   
   // 2) 샘플링 수 설정
-  const total_trials = 24;
-  const z_count = Math.round(total_trials * 0.58); // 14
-  const slash_count = total_trials - z_count;      // 10
+  total_trials = 24;
+  z_count = Math.round(total_trials * 0.58); // 14
+  slash_count = total_trials - z_count;      // 10
   
   // 3) 집단별 개수
-  const positive_z = 7;
-  const drug_z = z_count - positive_z;  // 7
-  const neg_slash = slash_count;        // 10 (부정 전부 slash)
+  positive_z = 7;
+  drug_z = z_count - positive_z;  // 7
+  neg_slash = slash_count;        // 10 (부정 전부 slash)
   
   // 4) 비복원추출 함수 (Python random.sample 대체)
   function strictSample(arr, n) {
@@ -387,9 +383,9 @@ async function experimentInit() {
   }
   
   // 5) 샘플링하고 자극 풀 생성
-  const positive_sample = strictSample(positive_images, positive_z);
-  const drug_sample = strictSample(drug_images, drug_z);
-  const negative_sample = strictSample(negative_images, neg_slash);
+  positive_sample = strictSample(positive_images, positive_z);
+  drug_sample = strictSample(drug_images, drug_z);
+  negative_sample = strictSample(negative_images, neg_slash);
   
   let stimuli_pool = [
     ...positive_sample.map(img => [img, '긍정', 'z']),
@@ -468,29 +464,29 @@ async function experimentInit() {
   General_IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_14
   // 1) 원본 이미지 파일 목록
-  const positive_images = [
+  positive_images = [
     "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
     "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
     "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
     "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
   ];
   
-  const negative_images = [
+  negative_images = [
     "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
     "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
     "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
     "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
   ];
   
-  const drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
+  drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
   
   // 2) 블록별 샘플링 개수 고정
-  const total_trials = 24;
-  const z_count = Math.round(total_trials * 0.58);  // 14
-  const slash_count = total_trials - z_count;       // 10
-  const positive_z = 7;
-  const drug_z = z_count - positive_z;              // 7
-  const neg_slash = slash_count;                     // 10
+  total_trials = 24;
+  z_count = Math.round(total_trials * 0.58);  // 14
+  slash_count = total_trials - z_count;       // 10
+  positive_z = 7;
+  drug_z = z_count - positive_z;              // 7
+  neg_slash = slash_count;                     // 10
   
   // 3) 비복원 추출 함수
   function strictSample(arr, n) {
