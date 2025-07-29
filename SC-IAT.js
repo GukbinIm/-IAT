@@ -147,7 +147,6 @@ async function experimentInit() {
   // Initialize components for Routine "Intro"
   IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_1
-  import java.util.*;
   
   public class StimulusSampling {
       // 1) 자극 리스트
@@ -346,7 +345,6 @@ async function experimentInit() {
   // Initialize components for Routine "Intro_2"
   Intro_2Clock = new util.Clock();
   // Run 'Begin Experiment' code from code_15
-  import java.util.*;
   
   public class Main {
       // 1) 원본 이미지 파일 목록
@@ -479,7 +477,6 @@ async function experimentInit() {
   // Initialize components for Routine "General_Intro"
   General_IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_14
-  import java.util.*;
   
   public class Main {
       static List<String> positive_images = Arrays.asList(
