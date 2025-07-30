@@ -5,9 +5,10 @@
 // ===== 브라우저 환경 감지 및 안전성 체크 =====
 const isBrowser = typeof window !== 'undefined';
 const isPsychoJSLoaded = () => {
-    return typeof PsychoJS !== 'undefined' && 
-           typeof core !== 'undefined' && 
-           typeof visual !== 'undefined';
+    return typeof window.PsychoJS !== 'undefined' && 
+           typeof window.core !== 'undefined' && 
+           typeof window.visual !== 'undefined' &&
+           typeof window.PsychoJS === 'function';
 };
 
 // ===== 설정 및 상수 =====
@@ -397,10 +398,10 @@ async function main() {
         
         // PsychoJS 로딩 대기
         let loadAttempts = 0;
-        const maxLoadAttempts = 50;
+        const maxLoadAttempts = 100; // 대기 시간 증가
         
         while (!isPsychoJSLoaded() && loadAttempts < maxLoadAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             loadAttempts++;
         }
         
@@ -409,6 +410,8 @@ async function main() {
             return;
         }
         
+        console.log('PsychoJS 로딩 완료, 실험 초기화 시작');
+        
         // 실험 초기화
         await experimentInit();
         
@@ -416,8 +419,107 @@ async function main() {
         await showWelcomeMessage();
         
         console.log('SC-IAT 실험 준비 완료');
+        
+        // PsychoJS 초기화 및 실험 시작
+        await startExperiment();
+        
     } catch (error) {
         console.error('메인 실행 실패:', error);
+    }
+}
+
+// ===== PsychoJS 실험 시작 함수 =====
+async function startExperiment() {
+    try {
+        // init psychoJS:
+        const psychoJS = new PsychoJS({
+            debug: true
+        });
+        
+        // open window:
+        psychoJS.openWindow({
+            fullscr: true,
+            color: Utils.createColor(-1.0, -1.0, -1.0),
+            units: 'height',
+            waitBlanking: true,
+            backgroundImage: '',
+            backgroundFit: 'none',
+        });
+        
+        // schedule the experiment:
+        psychoJS.schedule(psychoJS.gui.DlgFromDict({
+            dictionary: expInfo,
+            title: expName
+        }));
+        
+        const flowScheduler = new Scheduler(psychoJS);
+        const dialogCancelScheduler = new Scheduler(psychoJS);
+        psychoJS.scheduleCondition(function() { 
+            return (psychoJS.gui.dialogComponent.button === 'OK'); 
+        }, flowScheduler, dialogCancelScheduler);
+        
+        // flowScheduler gets run if the participants presses OK
+        flowScheduler.add(updateInfo); // add timeStamp
+        flowScheduler.add(experimentInit);
+        flowScheduler.add(IntroRoutineBegin());
+        flowScheduler.add(IntroRoutineEachFrame());
+        flowScheduler.add(IntroRoutineEnd());
+        const trialsLoopScheduler = new Scheduler(psychoJS);
+        flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
+        flowScheduler.add(trialsLoopScheduler);
+        flowScheduler.add(trialsLoopEnd);
+        
+        flowScheduler.add(Intro_2RoutineBegin());
+        flowScheduler.add(Intro_2RoutineEachFrame());
+        flowScheduler.add(Intro_2RoutineEnd());
+        flowScheduler.add(General_IntroRoutineBegin());
+        flowScheduler.add(General_IntroRoutineEachFrame());
+        flowScheduler.add(General_IntroRoutineEnd());
+        const blockLoopLoopScheduler = new Scheduler(psychoJS);
+        flowScheduler.add(blockLoopLoopBegin(blockLoopLoopScheduler));
+        flowScheduler.add(blockLoopLoopScheduler);
+        flowScheduler.add(blockLoopLoopEnd);
+        
+        flowScheduler.add(Intro_3RoutineBegin());
+        flowScheduler.add(Intro_3RoutineEachFrame());
+        flowScheduler.add(Intro_3RoutineEnd());
+        const trials_3LoopScheduler = new Scheduler(psychoJS);
+        flowScheduler.add(trials_3LoopBegin(trials_3LoopScheduler));
+        flowScheduler.add(trials_3LoopScheduler);
+        flowScheduler.add(trials_3LoopEnd);
+        
+        flowScheduler.add(Intro_4RoutineBegin());
+        flowScheduler.add(Intro_4RoutineEachFrame());
+        flowScheduler.add(Intro_4RoutineEnd());
+        flowScheduler.add(General_Intro_2RoutineBegin());
+        flowScheduler.add(General_Intro_2RoutineEachFrame());
+        flowScheduler.add(General_Intro_2RoutineEnd());
+        const blockLoop_2LoopScheduler = new Scheduler(psychoJS);
+        flowScheduler.add(blockLoop_2LoopBegin(blockLoop_2LoopScheduler));
+        flowScheduler.add(blockLoop_2LoopScheduler);
+        flowScheduler.add(blockLoop_2LoopEnd);
+        
+        flowScheduler.add(EndRoutineBegin());
+        flowScheduler.add(EndRoutineEachFrame());
+        flowScheduler.add(EndRoutineEnd());
+        flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
+        
+        // quit if user presses Cancel in dialog box:
+        dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
+        
+        // ===== 실험 시작 =====
+        psychoJS.start({
+            expName: expName,
+            expInfo: expInfo,
+            resources: [
+                // resources:
+            ]
+        });
+        
+        psychoJS.experimentLogger.setLevel(core.Logger.ServerLevel.INFO);
+        
+    } catch (error) {
+        console.error('실험 시작 실패:', error);
     }
 }
 
@@ -430,94 +532,6 @@ if (isBrowser) {
         main();
     }
 }
-
-// ===== PsychoJS 실험 스케줄링 (브라우저 호환) =====
-// init psychoJS:
-const psychoJS = new PsychoJS({
-    debug: true
-});
-
-// open window:
-psychoJS.openWindow({
-    fullscr: true,
-    color: Utils.createColor(-1.0, -1.0, -1.0),
-    units: 'height',
-    waitBlanking: true,
-    backgroundImage: '',
-    backgroundFit: 'none',
-});
-
-// schedule the experiment:
-psychoJS.schedule(psychoJS.gui.DlgFromDict({
-    dictionary: expInfo,
-    title: expName
-}));
-
-const flowScheduler = new Scheduler(psychoJS);
-const dialogCancelScheduler = new Scheduler(psychoJS);
-psychoJS.scheduleCondition(function() { 
-    return (psychoJS.gui.dialogComponent.button === 'OK'); 
-}, flowScheduler, dialogCancelScheduler);
-
-// flowScheduler gets run if the participants presses OK
-flowScheduler.add(updateInfo); // add timeStamp
-flowScheduler.add(experimentInit);
-flowScheduler.add(IntroRoutineBegin());
-flowScheduler.add(IntroRoutineEachFrame());
-flowScheduler.add(IntroRoutineEnd());
-const trialsLoopScheduler = new Scheduler(psychoJS);
-flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
-flowScheduler.add(trialsLoopScheduler);
-flowScheduler.add(trialsLoopEnd);
-
-flowScheduler.add(Intro_2RoutineBegin());
-flowScheduler.add(Intro_2RoutineEachFrame());
-flowScheduler.add(Intro_2RoutineEnd());
-flowScheduler.add(General_IntroRoutineBegin());
-flowScheduler.add(General_IntroRoutineEachFrame());
-flowScheduler.add(General_IntroRoutineEnd());
-const blockLoopLoopScheduler = new Scheduler(psychoJS);
-flowScheduler.add(blockLoopLoopBegin(blockLoopLoopScheduler));
-flowScheduler.add(blockLoopLoopScheduler);
-flowScheduler.add(blockLoopLoopEnd);
-
-flowScheduler.add(Intro_3RoutineBegin());
-flowScheduler.add(Intro_3RoutineEachFrame());
-flowScheduler.add(Intro_3RoutineEnd());
-const trials_3LoopScheduler = new Scheduler(psychoJS);
-flowScheduler.add(trials_3LoopBegin(trials_3LoopScheduler));
-flowScheduler.add(trials_3LoopScheduler);
-flowScheduler.add(trials_3LoopEnd);
-
-flowScheduler.add(Intro_4RoutineBegin());
-flowScheduler.add(Intro_4RoutineEachFrame());
-flowScheduler.add(Intro_4RoutineEnd());
-flowScheduler.add(General_Intro_2RoutineBegin());
-flowScheduler.add(General_Intro_2RoutineEachFrame());
-flowScheduler.add(General_Intro_2RoutineEnd());
-const blockLoop_2LoopScheduler = new Scheduler(psychoJS);
-flowScheduler.add(blockLoop_2LoopBegin(blockLoop_2LoopScheduler));
-flowScheduler.add(blockLoop_2LoopScheduler);
-flowScheduler.add(blockLoop_2LoopEnd);
-
-flowScheduler.add(EndRoutineBegin());
-flowScheduler.add(EndRoutineEachFrame());
-flowScheduler.add(EndRoutineEnd());
-flowScheduler.add(quitPsychoJS, 'Thank you for your patience.', true);
-
-// quit if user presses Cancel in dialog box:
-dialogCancelScheduler.add(quitPsychoJS, 'Thank you for your patience.', false);
-
-// ===== 실험 시작 =====
-psychoJS.start({
-    expName: expName,
-    expInfo: expInfo,
-    resources: [
-        // resources:
-    ]
-});
-
-psychoJS.experimentLogger.setLevel(core.Logger.ServerLevel.INFO);
 
 // ===== 브라우저 호환 루틴 함수들 =====
 
