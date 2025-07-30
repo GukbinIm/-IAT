@@ -71,6 +71,171 @@ const Utils = {
     }
 };
 
+// ===== SCIAT 네임스페이스 =====
+window.SCIAT = {
+    // 현재 trial 정보 관리
+    currentStimulus: {
+        file: null,
+        category: null,
+        correctKey: null,
+        index: 0
+    },
+    
+    // 자극 풀 관리
+    stimuliPools: {
+        block1: null,
+        block2: null,
+        block3: null,
+        block4: null
+    },
+    
+    // 이미지 목록
+    positive_images: [
+        "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
+        "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
+        "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
+        "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
+    ],
+    
+    negative_images: [
+        "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
+        "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
+        "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
+        "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
+    ],
+    
+    drug_images: ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"],
+    
+    // 통합된 비복원추출 함수
+    strictSample(array, n) {
+        if (n > array.length) {
+            throw new Error(`샘플링 개수 오류: 요청 ${n}, 가능 ${array.length}`);
+        }
+        const copy = array.slice();
+        const result = [];
+        for (let i = 0; i < n; i++) {
+            const idx = Math.floor(Math.random() * copy.length);
+            result.push(copy.splice(idx, 1)[0]);
+        }
+        return result;
+    },
+    
+    // 연속 중복 방지 셔플 함수
+    shuffleWithoutConsecutive(stimuliPool) {
+        const isValidSequence = (seq) => {
+            for (let i = 1; i < seq.length; i++) {
+                if (seq[i][0] === seq[i - 1][0]) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        
+        for (let i = 0; i < 1000; i++) {
+            // Fisher-Yates shuffle
+            for (let j = stimuliPool.length - 1; j > 0; j--) {
+                const k = Math.floor(Math.random() * (j + 1));
+                [stimuliPool[j], stimuliPool[k]] = [stimuliPool[k], stimuliPool[j]];
+            }
+            
+            if (isValidSequence(stimuliPool)) {
+                return stimuliPool;
+            }
+        }
+        
+        throw new Error("유효한 자극 배열 생성 실패");
+    },
+    
+    // 자극 풀 생성 함수
+    createStimuliPool(blockType) {
+        const configs = {
+            block1: { positive_z: 7, drug_z: 7, neg_slash: 10 },
+            block2: { positive_z: 21, drug_z: 21, neg_slash: 30 }, // 72 trials
+            block3: { positive_z: 7, drug_z: 7, neg_slash: 10 },
+            block4: { positive_z: 21, drug_z: 21, neg_slash: 30 }  // 72 trials
+        };
+        
+        const config = configs[blockType];
+        if (!config) {
+            throw new Error(`알 수 없는 블록 타입: ${blockType}`);
+        }
+        
+        // 샘플링
+        const positive_sample = this.strictSample(this.positive_images, config.positive_z);
+        const drug_sample = this.strictSample(this.drug_images, config.drug_z);
+        const negative_sample = this.strictSample(this.negative_images, config.neg_slash);
+        
+        // 자극 풀 생성
+        const stimuliPool = [
+            ...positive_sample.map(img => [img, "긍정", "z"]),
+            ...drug_sample.map(img => [img, "마약", "z"]),
+            ...negative_sample.map(img => [img, "부정", "/"])
+        ];
+        
+        // 셔플
+        return this.shuffleWithoutConsecutive(stimuliPool);
+    },
+    
+    // 현재 trial 정보 설정
+    setCurrentStimulus(stimulusInfo) {
+        this.currentStimulus = {
+            file: stimulusInfo[0],
+            category: stimulusInfo[1],
+            correctKey: stimulusInfo[2],
+            index: this.currentStimulus.index + 1
+        };
+    },
+    
+    // Intro 텍스트 생성 함수
+    createIntroText(blockType) {
+        const texts = {
+            block1: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어/마약 사진이 나오면 Z 키를 누르고, 부정적인 단어가 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.",
+            block2: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어/마약 사진이 나오면 Z 키를 누르고, 부정적인 단어가 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.",
+            block3: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어 사진이 나오면 Z 키를 누르고, 부정적인 단어/마약 사진이 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.",
+            block4: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어 사진이 나오면 Z 키를 누르고, 부정적인 단어/마약 사진이 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요."
+        };
+        
+        return texts[blockType] || texts.block1;
+    },
+    
+    // Feedback 메시지 생성 함수
+    createFeedbackMessage(keyResponse) {
+        if (!keyResponse.keys) {
+            return {
+                message: "더 빠르게 해주세요",
+                color: "white",
+                size: 0.06,
+                duration: 0.5
+            };
+        }
+        
+        if (keyResponse.rt > 1.5) {
+            return {
+                message: "더 빠르게 해주세요",
+                color: "white",
+                size: 0.06,
+                duration: 0.5
+            };
+        }
+        
+        if (keyResponse.corr === 1) {
+            return {
+                message: "O",
+                color: "green",
+                size: 0.1,
+                duration: 0.15
+            };
+        } else {
+            return {
+                message: "X",
+                color: "red",
+                size: 0.1,
+                duration: 0.15
+            };
+        }
+    }
+};
+
 // ===== 모듈 로딩 =====
 let core, data, sound, util, visual, hardware;
 let PsychoJS, TrialHandler, MultiStairHandler, Scheduler;
@@ -102,25 +267,6 @@ let expInfo = {
 // ===== 전역 변수 =====
 let currentLoop = null;
 
-// 전역 변수 네임스페이스 보호
-window.SCIAT = {
-    positive_images: null,
-    negative_images: null,
-    drug_images: null,
-    total_trials: null,
-    z_count: null,
-    slash_count: null,
-    positive_z: null,
-    drug_z: null,
-    neg_slash: null,
-    positive_sample: null,
-    drug_sample: null,
-    negative_sample: null,
-    stimuli_pool: null,
-    stimuli_pool_2: null,
-    currentLoop: null
-};
-
 // ===== 실험 초기화 =====
 const psychoJS = new PsychoJS({ debug: true });
 
@@ -128,35 +274,6 @@ const psychoJS = new PsychoJS({ debug: true });
 async function showWelcomeMessage() {
     return Utils.showModal(CONFIG.WELCOME_MESSAGE);
 }
-
-        const box = document.createElement('div');
-        box.style.background = 'white';
-        box.style.borderRadius = '10px';
-        box.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-        box.style.padding = '40px 30px 30px 30px';
-        box.innerHTML = message;
-
-        const btn = document.createElement('button');
-        btn.textContent = '확인';
-        btn.style.marginTop = '20px';
-        btn.style.fontSize = '1.1em';
-        btn.style.padding = '10px 30px';
-        btn.style.background = '#007bff';
-        btn.style.color = 'white';
-        btn.style.border = 'none';
-        btn.style.borderRadius = '5px';
-        btn.style.cursor = 'pointer';
-
-        btn.onclick = () => {
-            document.body.removeChild(modal);
-            resolve();
-        };
-
-        box.appendChild(btn);
-        modal.appendChild(box);
-        document.body.appendChild(modal);
-   
-
 
 // PsychoJS 초기화 후, 실험 시작 전에 안내 메시지를 보여줍니다.
 psychoJS.schedule(async function() {
@@ -172,6 +289,7 @@ psychoJS.openWindow({
   backgroundImage: '',
   backgroundFit: 'none',
 });
+
 // schedule the experiment:
 psychoJS.schedule(psychoJS.gui.DlgFromDict({
   dictionary: expInfo,
@@ -193,8 +311,6 @@ flowScheduler.add(trialsLoopBegin(trialsLoopScheduler));
 flowScheduler.add(trialsLoopScheduler);
 flowScheduler.add(trialsLoopEnd);
 
-
-
 flowScheduler.add(Intro_2RoutineBegin());
 flowScheduler.add(Intro_2RoutineEachFrame());
 flowScheduler.add(Intro_2RoutineEnd());
@@ -206,11 +322,6 @@ flowScheduler.add(blockLoopLoopBegin(blockLoopLoopScheduler));
 flowScheduler.add(blockLoopLoopScheduler);
 flowScheduler.add(blockLoopLoopEnd);
 
-
-
-
-
-
 flowScheduler.add(Intro_3RoutineBegin());
 flowScheduler.add(Intro_3RoutineEachFrame());
 flowScheduler.add(Intro_3RoutineEnd());
@@ -218,8 +329,6 @@ const trials_3LoopScheduler = new Scheduler(psychoJS);
 flowScheduler.add(trials_3LoopBegin(trials_3LoopScheduler));
 flowScheduler.add(trials_3LoopScheduler);
 flowScheduler.add(trials_3LoopEnd);
-
-
 
 flowScheduler.add(Intro_4RoutineBegin());
 flowScheduler.add(Intro_4RoutineEachFrame());
@@ -231,11 +340,6 @@ const blockLoop_2LoopScheduler = new Scheduler(psychoJS);
 flowScheduler.add(blockLoop_2LoopBegin(blockLoop_2LoopScheduler));
 flowScheduler.add(blockLoop_2LoopScheduler);
 flowScheduler.add(blockLoop_2LoopEnd);
-
-
-
-
-
 
 flowScheduler.add(EndRoutineBegin());
 flowScheduler.add(EndRoutineEachFrame());
@@ -263,7 +367,6 @@ async function updateInfo() {
   expInfo['psychopyVersion'] = '2024.2.4';
   expInfo['OS'] = window.navigator.platform;
 
-
   // store frame rate of monitor if we can measure it successfully
   expInfo['frameRate'] = psychoJS.window.getActualFrameRate();
   if (typeof expInfo['frameRate'] !== 'undefined')
@@ -274,11 +377,8 @@ async function updateInfo() {
   // add info from the URL:
   util.addInfoFromUrl(expInfo);
   
-
-  
   psychoJS.experiment.dataFileName = (("." + "/") + `data/${expInfo["participant"]}_${expName}_${expInfo["date"]}`);
   psychoJS.experiment.field_separator = '\t';
-
 
   return Scheduler.Event.NEXT;
 }
@@ -286,94 +386,17 @@ async function updateInfo() {
 async function experimentInit() {
   // Initialize components for Routine "Intro"
   IntroClock = new util.Clock();
-  // Run 'Begin Experiment' code from code_1
-  // 1) 원본 이미지 파일 목록
-  SCIAT.positive_images = [
-    "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-    "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-    "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-    "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-  ];
-
-  SCIAT.negative_images = [
-    "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-    "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-    "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-    "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-  ];
-
-  // drug_images, total_trials, z_count 변수가 이미 다른 곳에서 선언되었을 수 있으므로, 중복 선언을 피하기 위해 const로 변경하거나, 이미 선언된 경우 재선언하지 않도록 주의해야 합니다.
-  SCIAT.drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
-
-  // 2) 샘플링 수 설정
-  SCIAT.total_trials = 24;
-  SCIAT.z_count = Math.round(SCIAT.total_trials * 0.58);  // 14
-  SCIAT.slash_count = SCIAT.total_trials - SCIAT.z_count;       // 10
   
-  // 3) 집단별 개수
-  SCIAT.positive_z = 7;
-  SCIAT.drug_z = SCIAT.z_count - SCIAT.positive_z;  // 7
-  SCIAT.neg_slash = SCIAT.slash_count;        // 10
-  
-  // 4) 비복원추출 함수
-  function strict_sample(array, n) {
-    let copy = array.slice();  // 복제본
-    let result = [];
-    for (let i = 0; i < n; i++) {
-      let idx = Math.floor(Math.random() * copy.length);
-      result.push(copy.splice(idx, 1)[0]);
-    }
-    return result;
-  }
-  
-  // 5) 샘플링하고 자극 풀 생성
-  SCIAT.positive_sample = strict_sample(SCIAT.positive_images, SCIAT.positive_z);
-  SCIAT.drug_sample = strict_sample(SCIAT.drug_images, SCIAT.drug_z);
-  SCIAT.negative_sample = strict_sample(SCIAT.negative_images, SCIAT.neg_slash);
-  
-  // 자극 정보: [이미지 파일, 카테고리, 키]
-  SCIAT.stimuli_pool = [];
-  
-  for (let img of SCIAT.positive_sample) {
-    SCIAT.stimuli_pool.push([img, "긍정", "z"]);
-  }
-  for (let img of SCIAT.drug_sample) {
-    SCIAT.stimuli_pool.push([img, "마약", "z"]);
-  }
-  for (let img of SCIAT.negative_sample) {
-    SCIAT.stimuli_pool.push([img, "부정", "/"]);
-  }
-  
-  // 6) 연속 중복 방지 셔플
-  function is_valid(seq) {
-    for (let i = 1; i < seq.length; i++) {
-      if (seq[i][0] === seq[i - 1][0]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  for (let i = 0; i < 1000; i++) {
-    // 셔플
-    for (let j = SCIAT.stimuli_pool.length - 1; j > 0; j--) {
-      let k = Math.floor(Math.random() * (j + 1));
-      [SCIAT.stimuli_pool[j], SCIAT.stimuli_pool[k]] = [SCIAT.stimuli_pool[k], SCIAT.stimuli_pool[j]];
-    }
-  
-    if (is_valid(SCIAT.stimuli_pool)) {
-      break;
-    }
-  }
-  
-  if (!is_valid(SCIAT.stimuli_pool)) {
-    throw new Error("유효한 자극 배열 생성 실패");
-  }
+  // 자극 풀 초기화
+  SCIAT.stimuliPools.block1 = SCIAT.createStimuliPool('block1');
+  SCIAT.stimuliPools.block2 = SCIAT.createStimuliPool('block2');
+  SCIAT.stimuliPools.block3 = SCIAT.createStimuliPool('block3');
+  SCIAT.stimuliPools.block4 = SCIAT.createStimuliPool('block4');
   
   IntroText = new visual.TextStim({
     win: psychoJS.window,
     name: 'IntroText',
-    text: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어/마약 사진이 나오면 Z 키를 누르고, 부정적인 단어가 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.  ",
+    text: SCIAT.createIntroText('block1'),
     font: 'NanumGothic',
     units: undefined, 
     pos: [0, (- 0.1)], draggable: false, height: 0.04,  wrapWidth: 1.7, ori: 0.0,
@@ -410,7 +433,6 @@ async function experimentInit() {
   
   // Initialize components for Routine "trial_1"
   trial_1Clock = new util.Clock();
-  /* Syntax Error: Fix Python code */
   image_stim_1 = new visual.ImageStim({
     win : psychoJS.window,
     name : 'image_stim_1', units : undefined, 
@@ -424,6 +446,7 @@ async function experimentInit() {
     flipHoriz : false, flipVert : false,
     texRes : 128.0, interpolate : true, depth : -1.0 
   });
+  
   Drug_1 = new visual.TextStim({
     win: psychoJS.window,
     name: 'Drug_1',
@@ -478,40 +501,10 @@ async function experimentInit() {
   
   // Initialize components for Routine "Intro_2"
   Intro_2Clock = new util.Clock();
-  // Run 'Begin Experiment' code from code_15
-  // 1) 원본 이미지 파일 목록 - 이미 선언된 변수 재사용
-  // positive_images, negative_images, drug_images는 이미 선언되어 있음
-  
-  // 2) 샘플링 수 설정 - 이미 선언된 변수 재사용
-  // total_trials, z_count, slash_count, positive_z, drug_z, neg_slash는 이미 선언되어 있음
-  
-  // 4) 비복원추출 함수 (Python random.sample 대체)
-  function strictSample(arr, n) {
-    if (n > arr.length) {
-      throw new Error("샘플링 개수가 배열 길이보다 큽니다.");
-    }
-    const arrCopy = [...arr];
-    const result = [];
-    for (let i = 0; i < n; i++) {
-      const idx = Math.floor(Math.random() * arrCopy.length);
-      result.push(arrCopy.splice(idx, 1)[0]);
-    }
-    return result;
-  }
-  
-  // 5) 샘플링하고 자극 풀 생성 (이미 experimentInit에서 처리됨)
-  // SCIAT 네임스페이스의 변수들을 사용
-  
-  // 6) 연속 중복 방지 셔플 (이미 experimentInit에서 처리됨)
-  // SCIAT.stimuli_pool이 이미 생성되어 있음
-  
-  // 결과 출력(확인용)
-  console.log(SCIAT.stimuli_pool);
-  
   IntroText_2 = new visual.TextStim({
     win: psychoJS.window,
     name: 'IntroText_2',
-    text: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어/마약 사진이 나오면 Z 키를 누르고, 부정적인 단어가 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.  ",
+    text: SCIAT.createIntroText('block2'),
     font: 'NanumGothic',
     units: undefined, 
     pos: [0, (- 0.1)], draggable: false, height: 0.04,  wrapWidth: 1.7, ori: 0.0,
@@ -548,17 +541,10 @@ async function experimentInit() {
   
   // Initialize components for Routine "General_Intro"
   General_IntroClock = new util.Clock();
-  // Run 'Begin Experiment' code from code_14
-  // 1) 원본 이미지 파일 목록 - 이미 선언된 변수 재사용
-  // positive_images, negative_images, drug_images는 이미 선언되어 있음
-  
-  // 2) 블록별 샘플링 개수 고정 - 이미 선언된 변수 재사용
-  // total_trials, z_count, slash_count, positive_z, drug_z, neg_slash는 이미 선언되어 있음
-  
-  // 3) 비복원 추출 함수 (이미 위에서 정의됨)
   
   // Initialize components for Routine "SetupRoutine"
   SetupRoutineClock = new util.Clock();
+  
   // Initialize components for Routine "trial_2"
   trial_2Clock = new util.Clock();
   image_stim_2 = new visual.ImageStim({
@@ -574,6 +560,7 @@ async function experimentInit() {
     flipHoriz : false, flipVert : false,
     texRes : 128.0, interpolate : true, depth : 0.0 
   });
+  
   Drug_2 = new visual.TextStim({
     win: psychoJS.window,
     name: 'Drug_2',
@@ -612,7 +599,6 @@ async function experimentInit() {
   
   key_resp_2 = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
-  /* Syntax Error: Fix Python code */
   // Initialize components for Routine "feedback_2"
   feedback_2Clock = new util.Clock();
   msg_feedback_2 = new visual.TextStim({
@@ -632,7 +618,7 @@ async function experimentInit() {
   IntroText_3 = new visual.TextStim({
     win: psychoJS.window,
     name: 'IntroText_3',
-    text: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어 사진이 나오면 Z 키를 누르고, 부정적인 단어/마약 사진이 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.  ",
+    text: SCIAT.createIntroText('block3'),
     font: 'NanumGothic',
     units: undefined, 
     pos: [0, (- 0.1)], draggable: false, height: 0.04,  wrapWidth: 1.7, ori: 0.0,
@@ -667,8 +653,6 @@ async function experimentInit() {
   
   key_resp_intro_3 = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
-  // Run 'Begin Experiment' code from code_8
-  /* Syntax Error: Fix Python code */
   // Initialize components for Routine "trial_3"
   trial_3Clock = new util.Clock();
   image_stim_3 = new visual.ImageStim({
@@ -684,6 +668,7 @@ async function experimentInit() {
     flipHoriz : false, flipVert : false,
     texRes : 128.0, interpolate : true, depth : 0.0 
   });
+  
   Drug_3 = new visual.TextStim({
     win: psychoJS.window,
     name: 'Drug_3',
@@ -722,7 +707,6 @@ async function experimentInit() {
   
   key_resp_3 = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
-  /* Syntax Error: Fix Python code */
   // Initialize components for Routine "feedback_3"
   feedback_3Clock = new util.Clock();
   msg_feedback = new visual.TextStim({
@@ -768,7 +752,7 @@ async function experimentInit() {
   IntroText_4 = new visual.TextStim({
     win: psychoJS.window,
     name: 'IntroText_4',
-    text: "Z 키에는 왼쪽 손가락을, / 키에는 오른쪽 손가락을 올려주세요. \n화면의 왼쪽 상단에는 '긍정'이, 오른쪽 상단에는 '부정'이 나타납니다.\n중간에 나오는 단어는 다음 세 가지 범주 중 하나에 속할 수 있습니다. \n\n(1) 긍정적인 단어\n(2) 부정적인 단어\n(3) 마약 사진\n\n긍정적인 단어 사진이 나오면 Z 키를 누르고, 부정적인 단어/마약 사진이 나오면 / 키를 눌러주세요.\n\n단어 또는 사진은 한 번에 하나씩 나타나며, 잘못 분류하면 X가 나타납니다.\n정확하게, 가능한 한 빨리 눌러주세요. 준비가 되었다면, 스페이스바를 눌러 시작하세요.  ",
+    text: SCIAT.createIntroText('block4'),
     font: 'NanumGothic',
     units: undefined, 
     pos: [0, (- 0.1)], draggable: false, height: 0.04,  wrapWidth: 1.7, ori: 0.0,
@@ -779,8 +763,10 @@ async function experimentInit() {
   
   // Initialize components for Routine "General_Intro_2"
   General_Intro_2Clock = new util.Clock();
+  
   // Initialize components for Routine "SetupRoutine_2"
   SetupRoutine_2Clock = new util.Clock();
+  
   // Initialize components for Routine "trial_4"
   trial_4Clock = new util.Clock();
   image_stim_4 = new visual.ImageStim({
@@ -796,6 +782,7 @@ async function experimentInit() {
     flipHoriz : false, flipVert : false,
     texRes : 128.0, interpolate : true, depth : 0.0 
   });
+  
   Drug_4 = new visual.TextStim({
     win: psychoJS.window,
     name: 'Drug_4',
@@ -834,7 +821,6 @@ async function experimentInit() {
   
   key_resp_4 = new core.Keyboard({psychoJS: psychoJS, clock: new util.Clock(), waitForStart: true});
   
-  /* Syntax Error: Fix Python code */
   // Initialize components for Routine "feedback_4"
   feedback_4Clock = new util.Clock();
   msg_feedback_3 = new visual.TextStim({
@@ -1128,7 +1114,7 @@ function trials_2LoopBegin(trials_2LoopScheduler, snapshot) {
     // set up handler to look after randomisation of conditions etc
     trials_2 = new TrialHandler({
       psychoJS: psychoJS,
-      nReps: 24, method: TrialHandler.Method.SEQUENTIAL,
+      nReps: 72, method: TrialHandler.Method.SEQUENTIAL,
       extraInfo: expInfo, originPath: undefined,
       trialList: undefined,
       seed: undefined, name: 'trials_2'
@@ -1314,7 +1300,7 @@ function trials_4LoopBegin(trials_4LoopScheduler, snapshot) {
     // set up handler to look after randomisation of conditions etc
     trials_4 = new TrialHandler({
       psychoJS: psychoJS,
-      nReps: 24, method: TrialHandler.Method.SEQUENTIAL,
+      nReps: 72, method: TrialHandler.Method.SEQUENTIAL,
       extraInfo: expInfo, originPath: undefined,
       trialList: undefined,
       seed: undefined, name: 'trials_4'
@@ -1415,9 +1401,13 @@ function trial_1RoutineBegin(snapshot) {
     if ((trials.thisN >= 24)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
-    stim_index += 1;
-    image_stim.setImage(("images/" + stimulus_file));
+    
+    // 현재 trial 정보 설정
+    const currentStimulus = SCIAT.stimuliPools.block1[SCIAT.currentStimulus.index];
+    SCIAT.setCurrentStimulus(currentStimulus);
+    
+    // 이미지 설정
+    Utils.setImageSafely(image_stim_1, SCIAT.currentStimulus.file);
     
     key_resp_1.keys = undefined;
     key_resp_1.rt = undefined;
@@ -1507,7 +1497,7 @@ function trial_1RoutineEachFrame() {
         key_resp_1.rt = _key_resp_1_allKeys[_key_resp_1_allKeys.length - 1].rt;
         key_resp_1.duration = _key_resp_1_allKeys[_key_resp_1_allKeys.length - 1].duration;
         // was this correct?
-        if (key_resp_1.keys == this_key) {
+        if (key_resp_1.keys == SCIAT.currentStimulus.correctKey) {
             key_resp_1.corr = 1;
         } else {
             key_resp_1.corr = 0;
@@ -1559,16 +1549,16 @@ function trial_1RoutineEnd(snapshot) {
     }
     
     // 정오 판단
-    key_resp_1.corr = (key_resp_1.keys === this_key) ? 1 : 0;
+    key_resp_1.corr = (key_resp_1.keys === SCIAT.currentStimulus.correctKey) ? 1 : 0;
     
     // 데이터 저장
-    psychoJS.experiment.addData('stimulus', this_img);
-    psychoJS.experiment.addData('category', this_category);
+    psychoJS.experiment.addData('stimulus', SCIAT.currentStimulus.file);
+    psychoJS.experiment.addData('category', SCIAT.currentStimulus.category);
     psychoJS.experiment.addData('correct',  key_resp_1.corr);
     
     // was no response the correct answer?!
     if (key_resp_1.keys === undefined) {
-      if (['None','none',undefined].includes(this_key)) {
+      if (['None','none',undefined].includes(SCIAT.currentStimulus.correctKey)) {
          key_resp_1.corr = 1;  // correct non-response
       } else {
          key_resp_1.corr = 0;  // failed to respond (incorrectly)
@@ -1612,30 +1602,11 @@ function feedbackRoutineBegin(snapshot) {
     feedbackMaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_3
-    let message;
-    let fb_color;
-    let fb_size;
-    let fb_duration;
-    if (key_resp_1.keys != null && key_resp_1.rt > 1.5) {
-        message = "더 빠르게 해주세요";
-        fb_color = "white";
-        fb_size = 0.06;
-        fb_duration = 0.5;
-    } else if (key_resp_1.corr == 1) {
-        message = "O";
-        fb_color = "green";
-        fb_size = 0.1;
-        fb_duration = 0.15;
-    } else {
-        message = "X";
-        fb_color = "red";
-        fb_size = 0.1;
-        fb_duration = 0.15;
-    }
+    const feedback = SCIAT.createFeedbackMessage(key_resp_1);
     
-    msg_feedback_1.setColor(new util.Color(fb_color));
-    msg_feedback_1.setText(message);
-    msg_feedback_1.setHeight(fb_size);
+    msg_feedback_1.setColor(new util.Color(feedback.color));
+    msg_feedback_1.setText(feedback.message);
+    msg_feedback_1.setHeight(feedback.size);
     psychoJS.experiment.addData('feedback.started', globalClock.getTime());
     feedbackMaxDuration = null
     // keep track of which components have finished
@@ -1666,7 +1637,8 @@ function feedbackRoutineEachFrame() {
       msg_feedback_1.setAutoDraw(true);
     }
     
-    frameRemains = 0.1 + fb_duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
+    const feedback = SCIAT.createFeedbackMessage(key_resp_1);
+    frameRemains = 0.1 + feedback.duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
     if (msg_feedback_1.status === PsychoJS.Status.STARTED && t >= frameRemains) {
       msg_feedback_1.setAutoDraw(false);
     }
@@ -1881,10 +1853,7 @@ function General_IntroRoutineBegin(snapshot) {
     General_IntroMaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_14
-    message = "";
-    fb_color = "white";
-    fb_duration = 0.0;
-    fb_size = 0.06;
+    // 빈 설정 - 필요시 추가
     
     psychoJS.experiment.addData('General_Intro.started', globalClock.getTime());
     General_IntroMaxDuration = null
@@ -1964,66 +1933,8 @@ function SetupRoutineRoutineBegin(snapshot) {
     SetupRoutineMaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_4
-    // (2) 블록 2 샘플링 개수 (trial_2)
-    const total_trials_2 = 24;
-    const z_count_2 = Math.round(total_trials_2 * 0.58);  // 14
-    const slash_count_2 = total_trials_2 - z_count_2;    // 10
-    const positive_z_2 = 7;
-    const drug_z_2 = z_count_2 - positive_z_2;           // 7
-    const neg_slash_2 = slash_count_2;                    // 10
-    
-    // (3) 비복원 추출 함수
-    function strictSample(images, n) {
-      if (n < 0 || n > images.length) {
-        throw new Error(`샘플 개수 오류: 요청 ${n}, 가능 ${images.length}`);
-      }
-      const arrCopy = [...images];
-      const result = [];
-      for (let i = 0; i < n; i++) {
-        const idx = Math.floor(Math.random() * arrCopy.length);
-        result.push(arrCopy.splice(idx, 1)[0]);
-      }
-      return result;
-    }
-    
-    // (4) 샘플링
-    const positive_sample_2 = strictSample(positive_images, positive_z_2);
-    const drug_sample_2 = strictSample(drug_images, drug_z_2);
-    const negative_sample_2 = strictSample(negative_images, neg_slash_2);
-    
-    // (5) stimuli_pool_2 전역 변수로 할당
-    SCIAT.stimuli_pool_2 = [
-      ...positive_sample_2.map(img => [img, '긍정', 'z']),
-      ...drug_sample_2.map(img => [img, '마약', 'z']),
-      ...negative_sample_2.map(img => [img, '부정', '/'])
-    ];
-    
-    // (6) 중복 방지 셔플
-    function isValidSequence(seq) {
-      for (let i = 1; i < seq.length; i++) {
-        if (seq[i][0] === seq[i - 1][0]) {
-          return false;
-        }
-      }
-      return true;
-    }
-    
-    let valid = false;
-    for (let i = 0; i < 1000; i++) {
-      // Fisher-Yates shuffle
-      for (let j = SCIAT.stimuli_pool_2.length - 1; j > 0; j--) {
-        const k = Math.floor(Math.random() * (j + 1));
-        [SCIAT.stimuli_pool_2[j], SCIAT.stimuli_pool_2[k]] = [SCIAT.stimuli_pool_2[k], SCIAT.stimuli_pool_2[j]];
-      }
-      if (isValidSequence(SCIAT.stimuli_pool_2)) {
-        valid = true;
-        break;
-      }
-    }
-    
-    if (!valid) {
-      throw new Error("유효한 자극 배열 생성 실패");
-    }
+    // 블록 2 자극 풀은 이미 experimentInit에서 생성됨
+    // 추가 설정이 필요한 경우 여기에 추가
     
     psychoJS.experiment.addData('SetupRoutine.started', globalClock.getTime());
     SetupRoutineMaxDuration = null
@@ -2106,19 +2017,16 @@ function trial_2RoutineBegin(snapshot) {
     key_resp_2.rt = undefined;
     _key_resp_2_allKeys = [];
     // Run 'Begin Routine' code from code_6
-    if ((trials.thisN >= 24)) {
+    if ((trials_2.thisN >= 72)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
-    stim_index += 1;
-    // 이미지 로딩 오류 방지
-    try {
-        image_stim.setImage(("images/" + stimulus_file));
-    } catch (error) {
-        console.error('이미지 로딩 실패:', stimulus_file, error);
-        // 기본 이미지로 대체
-        image_stim.setImage("images/default.jpg");
-    }
+    
+    // 현재 trial 정보 설정
+    const currentStimulus = SCIAT.stimuliPools.block2[SCIAT.currentStimulus.index];
+    SCIAT.setCurrentStimulus(currentStimulus);
+    
+    // 이미지 설정
+    Utils.setImageSafely(image_stim_2, SCIAT.currentStimulus.file);
     
     psychoJS.experiment.addData('trial_2.started', globalClock.getTime());
     trial_2MaxDuration = null
@@ -2205,7 +2113,7 @@ function trial_2RoutineEachFrame() {
         key_resp_2.rt = _key_resp_2_allKeys[_key_resp_2_allKeys.length - 1].rt;
         key_resp_2.duration = _key_resp_2_allKeys[_key_resp_2_allKeys.length - 1].duration;
         // was this correct?
-        if (key_resp_2.keys == this_key2) {
+        if (key_resp_2.keys == SCIAT.currentStimulus.correctKey) {
             key_resp_2.corr = 1;
         } else {
             key_resp_2.corr = 0;
@@ -2252,7 +2160,7 @@ function trial_2RoutineEnd(snapshot) {
     psychoJS.experiment.addData('trial_2.stopped', globalClock.getTime());
     // was no response the correct answer?!
     if (key_resp_2.keys === undefined) {
-      if (['None','none',undefined].includes(this_key2)) {
+      if (['None','none',undefined].includes(SCIAT.currentStimulus.correctKey)) {
          key_resp_2.corr = 1;  // correct non-response
       } else {
          key_resp_2.corr = 0;  // failed to respond (incorrectly)
@@ -2296,19 +2204,11 @@ function feedback_2RoutineBegin(snapshot) {
     feedback_2MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_7
-    if ((key_resp_2.keys && (key_resp_2.rt > 1.5))) {
-        [message, fb_color, fb_size, fb_duration] = ["\ub354 \ube60\ub974\uac8c \ud574\uc8fc\uc138\uc694", "white", 0.06, 0.5];
-    } else {
-        if ((key_resp_2.corr === 1)) {
-            [message, fb_color, fb_size, fb_duration] = ["O", "green", 0.1, 0.15];
-        } else {
-            [message, fb_color, fb_size, fb_duration] = ["X", "red", 0.1, 0.15];
-        }
-    }
+    const feedback = SCIAT.createFeedbackMessage(key_resp_2);
     
-    msg_feedback_2.setColor(new util.Color(fb_color));
-    msg_feedback_2.setText(message);
-    msg_feedback_2.setHeight(fb_size);
+    msg_feedback_2.setColor(new util.Color(feedback.color));
+    msg_feedback_2.setText(feedback.message);
+    msg_feedback_2.setHeight(feedback.size);
     psychoJS.experiment.addData('feedback_2.started', globalClock.getTime());
     feedback_2MaxDuration = null
     // keep track of which components have finished
@@ -2339,7 +2239,8 @@ function feedback_2RoutineEachFrame() {
       msg_feedback_2.setAutoDraw(true);
     }
     
-    frameRemains = 0.1 + fb_duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
+    const feedback = SCIAT.createFeedbackMessage(key_resp_2);
+    frameRemains = 0.1 + feedback.duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
     if (msg_feedback_2.status === PsychoJS.Status.STARTED && t >= frameRemains) {
       msg_feedback_2.setAutoDraw(false);
     }
@@ -2406,10 +2307,7 @@ function Intro_3RoutineBegin(snapshot) {
     key_resp_intro_3.rt = undefined;
     _key_resp_intro_3_allKeys = [];
     // Run 'Begin Routine' code from code_8
-    message = "";
-    fb_color = "white";
-    fb_duration = 0.0;
-    fb_size = 0.06;
+    // 빈 설정 - 필요시 추가
     
     psychoJS.experiment.addData('Intro_3.started', globalClock.getTime());
     Intro_3MaxDuration = null
@@ -2566,16 +2464,13 @@ function trial_3RoutineBegin(snapshot) {
     if ((trials.thisN >= 24)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
-    stim_index += 1;
-    // 이미지 로딩 오류 방지
-    try {
-        image_stim.setImage(("images/" + stimulus_file));
-    } catch (error) {
-        console.error('이미지 로딩 실패:', stimulus_file, error);
-        // 기본 이미지로 대체
-        image_stim.setImage("images/default.jpg");
-    }
+    
+    // 현재 trial 정보 설정
+    const currentStimulus = SCIAT.stimuliPools.block3[SCIAT.currentStimulus.index];
+    SCIAT.setCurrentStimulus(currentStimulus);
+    
+    // 이미지 설정
+    Utils.setImageSafely(image_stim_3, SCIAT.currentStimulus.file);
     
     psychoJS.experiment.addData('trial_3.started', globalClock.getTime());
     trial_3MaxDuration = null
@@ -2662,7 +2557,7 @@ function trial_3RoutineEachFrame() {
         key_resp_3.rt = _key_resp_3_allKeys[_key_resp_3_allKeys.length - 1].rt;
         key_resp_3.duration = _key_resp_3_allKeys[_key_resp_3_allKeys.length - 1].duration;
         // was this correct?
-        if (key_resp_3.keys == correct_key3) {
+        if (key_resp_3.keys == SCIAT.currentStimulus.correctKey) {
             key_resp_3.corr = 1;
         } else {
             key_resp_3.corr = 0;
@@ -2709,7 +2604,7 @@ function trial_3RoutineEnd(snapshot) {
     psychoJS.experiment.addData('trial_3.stopped', globalClock.getTime());
     // was no response the correct answer?!
     if (key_resp_3.keys === undefined) {
-      if (['None','none',undefined].includes(correct_key3)) {
+      if (['None','none',undefined].includes(SCIAT.currentStimulus.correctKey)) {
          key_resp_3.corr = 1;  // correct non-response
       } else {
          key_resp_3.corr = 0;  // failed to respond (incorrectly)
@@ -2753,10 +2648,11 @@ function feedback_3RoutineBegin(snapshot) {
     feedback_3MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_10
-    /* Syntax Error: Fix Python code */
-    msg_feedback.setColor(new util.Color(fb_color));
-    msg_feedback.setText(message);
-    msg_feedback.setHeight(fb_size);
+    const feedback = SCIAT.createFeedbackMessage(key_resp_3);
+    
+    msg_feedback.setColor(new util.Color(feedback.color));
+    msg_feedback.setText(feedback.message);
+    msg_feedback.setHeight(feedback.size);
     psychoJS.experiment.addData('feedback_3.started', globalClock.getTime());
     feedback_3MaxDuration = null
     // keep track of which components have finished
@@ -2787,7 +2683,8 @@ function feedback_3RoutineEachFrame() {
       msg_feedback.setAutoDraw(true);
     }
     
-    frameRemains = 0.1 + fb_duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
+    const feedback = SCIAT.createFeedbackMessage(key_resp_3);
+    frameRemains = 0.1 + feedback.duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
     if (msg_feedback.status === PsychoJS.Status.STARTED && t >= frameRemains) {
       msg_feedback.setAutoDraw(false);
     }
@@ -2984,7 +2881,6 @@ function Intro_4RoutineEnd(snapshot) {
         }
     
     key_resp_intro_4.stop();
-    /* Syntax Error: Fix Python code */
     // the Routine "Intro_4" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -3009,10 +2905,7 @@ function General_Intro_2RoutineBegin(snapshot) {
     General_Intro_2MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_16
-    message = "";
-    fb_color = "white";
-    fb_duration = 0.0;
-    fb_size = 0.06;
+    // 빈 설정 - 필요시 추가
     
     psychoJS.experiment.addData('General_Intro_2.started', globalClock.getTime());
     General_Intro_2MaxDuration = null
@@ -3068,7 +2961,6 @@ function General_Intro_2RoutineEnd(snapshot) {
       }
     }
     psychoJS.experiment.addData('General_Intro_2.stopped', globalClock.getTime());
-    /* Syntax Error: Fix Python code */
     // the Routine "General_Intro_2" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -3093,10 +2985,7 @@ function SetupRoutine_2RoutineBegin(snapshot) {
     SetupRoutine_2MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_17
-    message = "";
-    fb_color = "white";
-    fb_duration = 0.0;
-    fb_size = 0.06;
+    // 빈 설정 - 필요시 추가
     
     psychoJS.experiment.addData('SetupRoutine_2.started', globalClock.getTime());
     SetupRoutine_2MaxDuration = null
@@ -3152,7 +3041,6 @@ function SetupRoutine_2RoutineEnd(snapshot) {
       }
     }
     psychoJS.experiment.addData('SetupRoutine_2.stopped', globalClock.getTime());
-    /* Syntax Error: Fix Python code */
     // the Routine "SetupRoutine_2" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset();
     
@@ -3180,19 +3068,16 @@ function trial_4RoutineBegin(snapshot) {
     key_resp_4.rt = undefined;
     _key_resp_4_allKeys = [];
     // Run 'Begin Routine' code from code_12
-    if ((trials.thisN >= 24)) {
+    if ((trials_4.thisN >= 72)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
-    stim_index += 1;
-    // 이미지 로딩 오류 방지
-    try {
-        image_stim.setImage(("images/" + stimulus_file));
-    } catch (error) {
-        console.error('이미지 로딩 실패:', stimulus_file, error);
-        // 기본 이미지로 대체
-        image_stim.setImage("images/default.jpg");
-    }
+    
+    // 현재 trial 정보 설정
+    const currentStimulus = SCIAT.stimuliPools.block4[SCIAT.currentStimulus.index];
+    SCIAT.setCurrentStimulus(currentStimulus);
+    
+    // 이미지 설정
+    Utils.setImageSafely(image_stim_4, SCIAT.currentStimulus.file);
     
     psychoJS.experiment.addData('trial_4.started', globalClock.getTime());
     trial_4MaxDuration = null
@@ -3279,7 +3164,7 @@ function trial_4RoutineEachFrame() {
         key_resp_4.rt = _key_resp_4_allKeys[_key_resp_4_allKeys.length - 1].rt;
         key_resp_4.duration = _key_resp_4_allKeys[_key_resp_4_allKeys.length - 1].duration;
         // was this correct?
-        if (key_resp_4.keys == correct_key4) {
+        if (key_resp_4.keys == SCIAT.currentStimulus.correctKey) {
             key_resp_4.corr = 1;
         } else {
             key_resp_4.corr = 0;
@@ -3326,7 +3211,7 @@ function trial_4RoutineEnd(snapshot) {
     psychoJS.experiment.addData('trial_4.stopped', globalClock.getTime());
     // was no response the correct answer?!
     if (key_resp_4.keys === undefined) {
-      if (['None','none',undefined].includes(correct_key4)) {
+      if (['None','none',undefined].includes(SCIAT.currentStimulus.correctKey)) {
          key_resp_4.corr = 1;  // correct non-response
       } else {
          key_resp_4.corr = 0;  // failed to respond (incorrectly)
@@ -3370,40 +3255,15 @@ function feedback_4RoutineBegin(snapshot) {
     feedback_4MaxDurationReached = false;
     // update component parameters for each repeat
     // Run 'Begin Routine' code from code_13
-    if ((trials_4.thisTrial === null)) {
+    if ((trials_4.thisN >= 72)) {
         continueRoutine = false;
     }
-    if (key_resp_4.keys) {
-        if (((key_resp_4.rt !== null) && (key_resp_4.rt > 1.5))) {
-            message = "\ub354 \ube60\ub974\uac8c \ud574\uc8fc\uc138\uc694";
-            fb_color = "white";
-            fb_duration = 0.5;
-            fb_size = 0.06;
-        } else {
-            if ((key_resp_4.corr === 1)) {
-                message = "O";
-                fb_color = "green";
-                fb_duration = 0.15;
-                fb_size = 0.1;
-            } else {
-                if ((key_resp_4.corr === 0)) {
-                    message = "X";
-                    fb_color = "red";
-                    fb_duration = 0.15;
-                    fb_size = 0.1;
-                }
-            }
-        }
-    } else {
-        message = "\ub354 \ube60\ub974\uac8c \ud574\uc8fc\uc138\uc694";
-        fb_color = "white";
-        fb_duration = 0.5;
-        fb_size = 0.06;
-    }
     
-    msg_feedback_3.setColor(new util.Color(fb_color));
-    msg_feedback_3.setText(message);
-    msg_feedback_3.setHeight(fb_size);
+    const feedback = SCIAT.createFeedbackMessage(key_resp_4);
+    
+    msg_feedback_3.setColor(new util.Color(feedback.color));
+    msg_feedback_3.setText(feedback.message);
+    msg_feedback_3.setHeight(feedback.size);
     psychoJS.experiment.addData('feedback_4.started', globalClock.getTime());
     feedback_4MaxDuration = null
     // keep track of which components have finished
@@ -3434,7 +3294,8 @@ function feedback_4RoutineEachFrame() {
       msg_feedback_3.setAutoDraw(true);
     }
     
-    frameRemains = 0.1 + fb_duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
+    const feedback = SCIAT.createFeedbackMessage(key_resp_4);
+    frameRemains = 0.1 + feedback.duration - psychoJS.window.monitorFramePeriod * 0.75;// most of one frame period left
     if (msg_feedback_3.status === PsychoJS.Status.STARTED && t >= frameRemains) {
       msg_feedback_3.setAutoDraw(false);
     }
