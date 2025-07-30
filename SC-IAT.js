@@ -1,3 +1,7 @@
+﻿/*************** 
+ * Sc-Iat *
+ ***************/
+
 import { core, data, sound, util, visual, hardware } from './lib/psychojs-2024.2.4.js';
 const { PsychoJS } = core;
 const { TrialHandler, MultiStairHandler } = data;
@@ -14,10 +18,89 @@ let expInfo = {
     'session': '001',
 };
 
+// 전역 변수 네임스페이스 보호 (다른 스크립트와의 충돌 방지)
+window.SCIAT = {
+    positive_images: null,
+    negative_images: null,
+    drug_images: null,
+    total_trials: null,
+    z_count: null,
+    slash_count: null,
+    positive_z: null,
+    drug_z: null,
+    neg_slash: null,
+    positive_sample: null,
+    drug_sample: null,
+    negative_sample: null,
+    stimuli_pool: null,
+    stimuli_pool_2: null
+};
+
 // Start code blocks for 'Before Experiment'
 // init psychoJS:
 const psychoJS = new PsychoJS({
   debug: true
+});
+// 실험 시작 전 참가자에게 간단한 안내 메시지를 표시하는 함수입니다.
+// 이 함수는 실험이 시작되기 전에 한 번 호출되어야 하며, 확인을 누르면 실험이 계속 진행됩니다.
+function showWelcomeMessage() {
+    return new Promise((resolve) => {
+        // 안내 메시지 내용 (한국어)
+        const message = `
+        <div style="font-size:1.3em; text-align:center; padding:30px;">
+            <b>안녕하세요!</b><br><br>
+            본 실험에 참여해주셔서 감사합니다.<br>
+            본 실험은 <b>암묵적 연합 검사(SC-IAT)</b>입니다.<br><br>
+            안내에 따라 실험을 진행해 주세요.<br>
+            준비가 되셨으면 아래의 <b>확인</b> 버튼을 눌러주세요.
+        </div>
+        `;
+
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.5)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+
+        const box = document.createElement('div');
+        box.style.background = 'white';
+        box.style.borderRadius = '10px';
+        box.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+        box.style.padding = '40px 30px 30px 30px';
+        box.innerHTML = message;
+
+        const btn = document.createElement('button');
+        btn.textContent = '확인';
+        btn.style.marginTop = '20px';
+        btn.style.fontSize = '1.1em';
+        btn.style.padding = '10px 30px';
+        btn.style.background = '#007bff';
+        btn.style.color = 'white';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '5px';
+        btn.style.cursor = 'pointer';
+
+        btn.onclick = () => {
+            document.body.removeChild(modal);
+            resolve();
+        };
+
+        box.appendChild(btn);
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+    });
+}
+
+// PsychoJS 초기화 후, 실험 시작 전에 안내 메시지를 보여줍니다.
+psychoJS.schedule(async function() {
+    await showWelcomeMessage();
 });
 
 // open window:
@@ -144,66 +227,60 @@ async function experimentInit() {
   IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_1
   // 1) 원본 이미지 파일 목록
-  // positive_images 변수를 중복 선언하지 않도록 let이 아닌 var로 선언하거나, 이미 상위 스코프에 선언되어 있다면 재선언하지 않습니다.
-  // 여기서는 var로 변경하여 중복 선언 오류를 방지합니다.
-  const positive_images = [
+  SCIAT.positive_images = [
     "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
     "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
     "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
     "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
   ];
 
-  // negative_images 변수를 중복 선언하지 않도록 let이 아닌 var로 선언하거나, 이미 상위 스코프에 선언되어 있다면 재선언하지 않습니다.
-  // 여기서는 var로 변경하여 중복 선언 오류를 방지합니다.
-  const negative_images = [
+  SCIAT.negative_images = [
     "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
     "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
     "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
     "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
   ];
 
-  // drug_images, total_trials, z_count 변수를 중복 선언하지 않도록 var로 선언하여 오류를 방지합니다.
-  const drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
+  // drug_images, total_trials, z_count 변수가 이미 다른 곳에서 선언되었을 수 있으므로, 중복 선언을 피하기 위해 const로 변경하거나, 이미 선언된 경우 재선언하지 않도록 주의해야 합니다.
+  SCIAT.drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
 
   // 2) 샘플링 수 설정
-  const total_trials = 24;
-  const z_count = Math.round(total_trials * 0.58);  // 14
-  const slash_count = total_trials - z_count;       // 10
+  SCIAT.total_trials = 24;
+  SCIAT.z_count = Math.round(SCIAT.total_trials * 0.58);  // 14
+  SCIAT.slash_count = SCIAT.total_trials - SCIAT.z_count;       // 10
   
   // 3) 집단별 개수
-  const positive_z = 7;
-  const drug_z = z_count - positive_z;  // 7
-  const neg_slash = slash_count;        // 10
+  SCIAT.positive_z = 7;
+  SCIAT.drug_z = SCIAT.z_count - SCIAT.positive_z;  // 7
+  SCIAT.neg_slash = SCIAT.slash_count;        // 10
   
   // 4) 비복원추출 함수
   function strict_sample(array, n) {
-    const copy = array.slice();  // 복제본
-    const result = [];
-    for (const i = 0; i < n; i++) {
-      const idx = Math.floor(Math.random() * copy.length);
+    let copy = array.slice();  // 복제본
+    let result = [];
+    for (let i = 0; i < n; i++) {
+      let idx = Math.floor(Math.random() * copy.length);
       result.push(copy.splice(idx, 1)[0]);
     }
     return result;
   }
-
-  // 5) 샘플링하고 자극 풀 생성
-  // 이미 상위 스코프에 positive_sample, drug_sample, negative_sample이 선언되어 있을 수 있으므로, 중복 선언 오류를 방지하기 위해 let/var 없이 값을 재할당합니다.
-  positive_sample = strict_sample(positive_images, positive_z);
-  drug_sample = strict_sample(drug_images, drug_z);
-  negative_sample = strict_sample(negative_images, neg_slash);
-
-  // 자극 정보: [이미지 파일, 카테고리, 키]
-  // 이미 상위 스코프에 stimuli_pool이 선언되어 있을 수 있으므로, 중복 선언 오류를 방지하기 위해 let/var 없이 값을 재할당합니다.
-  stimuli_pool = [];
   
-  for (let img of positive_sample) {
-    stimuli_pool.push([img, "긍정", "z"]);
+  // 5) 샘플링하고 자극 풀 생성
+  SCIAT.positive_sample = strict_sample(SCIAT.positive_images, SCIAT.positive_z);
+  SCIAT.drug_sample = strict_sample(SCIAT.drug_images, SCIAT.drug_z);
+  SCIAT.negative_sample = strict_sample(SCIAT.negative_images, SCIAT.neg_slash);
+  
+  // 자극 정보: [이미지 파일, 카테고리, 키]
+  SCIAT.stimuli_pool = [];
+  
+  for (let img of SCIAT.positive_sample) {
+    SCIAT.stimuli_pool.push([img, "긍정", "z"]);
   }
-  for (let img of drug_sample) {
-    stimuli_pool.push([img, "마약", "z"]);
+  for (let img of SCIAT.drug_sample) {
+    SCIAT.stimuli_pool.push([img, "마약", "z"]);
   }
-  for (let img of negative_sample) {
-    stimuli_pool.push([img, "부정", "/"]);
+  for (let img of SCIAT.negative_sample) {
+    SCIAT.stimuli_pool.push([img, "부정", "/"]);
   }
   
   // 6) 연속 중복 방지 셔플
@@ -218,17 +295,17 @@ async function experimentInit() {
   
   for (let i = 0; i < 1000; i++) {
     // 셔플
-    for (let j = stimuli_pool.length - 1; j > 0; j--) {
+    for (let j = SCIAT.stimuli_pool.length - 1; j > 0; j--) {
       let k = Math.floor(Math.random() * (j + 1));
-      [stimuli_pool[j], stimuli_pool[k]] = [stimuli_pool[k], stimuli_pool[j]];
+      [SCIAT.stimuli_pool[j], SCIAT.stimuli_pool[k]] = [SCIAT.stimuli_pool[k], SCIAT.stimuli_pool[j]];
     }
   
-    if (is_valid(stimuli_pool)) {
+    if (is_valid(SCIAT.stimuli_pool)) {
       break;
     }
   }
   
-  if (!is_valid(stimuli_pool)) {
+  if (!is_valid(SCIAT.stimuli_pool)) {
     throw new Error("유효한 자극 배열 생성 실패");
   }
   
@@ -341,32 +418,11 @@ async function experimentInit() {
   // Initialize components for Routine "Intro_2"
   Intro_2Clock = new util.Clock();
   // Run 'Begin Experiment' code from code_15
-  // 1) 원본 이미지 파일 목록
-  positive_images = [
-    "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-    "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-    "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-    "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-  ];
+  // 1) 원본 이미지 파일 목록 - 이미 선언된 변수 재사용
+  // positive_images, negative_images, drug_images는 이미 선언되어 있음
   
-   negative_images = [
-    "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-    "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-    "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-    "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-  ];
-  
-  drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
-  
-  // 2) 샘플링 수 설정
-  total_trials = 24;
-  z_count = Math.round(total_trials * 0.58); // 14
-  slash_count = total_trials - z_count;      // 10
-  
-  // 3) 집단별 개수
-  positive_z = 7;
-  drug_z = z_count - positive_z;  // 7
-  neg_slash = slash_count;        // 10 (부정 전부 slash)
+  // 2) 샘플링 수 설정 - 이미 선언된 변수 재사용
+  // total_trials, z_count, slash_count, positive_z, drug_z, neg_slash는 이미 선언되어 있음
   
   // 4) 비복원추출 함수 (Python random.sample 대체)
   function strictSample(arr, n) {
@@ -382,45 +438,14 @@ async function experimentInit() {
     return result;
   }
   
-  // 5) 샘플링하고 자극 풀 생성
-  positive_sample = strictSample(positive_images, positive_z);
-  drug_sample = strictSample(drug_images, drug_z);
-  negative_sample = strictSample(negative_images, neg_slash);
+  // 5) 샘플링하고 자극 풀 생성 (이미 experimentInit에서 처리됨)
+  // SCIAT 네임스페이스의 변수들을 사용
   
-  let stimuli_pool = [
-    ...positive_sample.map(img => [img, '긍정', 'z']),
-    ...drug_sample.map(img => [img, '마약', 'z']),
-    ...negative_sample.map(img => [img, '부정', '/'])
-  ];
-  
-  // 6) 연속 중복 방지 셔플
-  function isValid(seq) {
-    for (let i = 1; i < seq.length; i++) {
-      if (seq[i][0] === seq[i-1][0]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  let valid = false;
-  for (let i = 0; i < 1000; i++) {
-    for (let j = stimuli_pool.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1));
-      [stimuli_pool[j], stimuli_pool[k]] = [stimuli_pool[k], stimuli_pool[j]];
-    }
-    if (isValid(stimuli_pool)) {
-      valid = true;
-      break;
-    }
-  }
-  
-  if (!valid) {
-    throw new Error("유효한 자극 배열 생성 실패");
-  }
+  // 6) 연속 중복 방지 셔플 (이미 experimentInit에서 처리됨)
+  // SCIAT.stimuli_pool이 이미 생성되어 있음
   
   // 결과 출력(확인용)
-  console.log(stimuli_pool);
+  console.log(SCIAT.stimuli_pool);
   
   IntroText_2 = new visual.TextStim({
     win: psychoJS.window,
@@ -463,30 +488,11 @@ async function experimentInit() {
   // Initialize components for Routine "General_Intro"
   General_IntroClock = new util.Clock();
   // Run 'Begin Experiment' code from code_14
-  // 1) 원본 이미지 파일 목록
-  positive_images = [
-    "기쁘다.jpg", "만족하다.jpg", "흐뭇하다.jpg", "영광스럽다.jpg", "평온하다.jpg",
-    "뿌듯하다.jpg", "사랑스럽다.jpg", "반갑다.jpg", "평화롭다.jpg", "상쾌하다.jpg",
-    "신나다.jpg", "애정하다.jpg", "유쾌하다.jpg", "재미있다.jpg", "편안하다.jpg",
-    "행복하다.jpg", "즐겁다.jpg", "환희하다.jpg", "흥겹다.jpg", "흥미롭다.jpg", "자랑스럽다.jpg"
-  ];
+  // 1) 원본 이미지 파일 목록 - 이미 선언된 변수 재사용
+  // positive_images, negative_images, drug_images는 이미 선언되어 있음
   
-  negative_images = [
-    "거북하다.jpg", "격분하다.jpg", "경멸하다.jpg", "끔찍하다.jpg", "괴롭다.jpg",
-    "분노하다.jpg", "불만족하다.jpg", "불쾌하다.jpg", "불행하다.jpg", "비참하다.jpg",
-    "섬뜩하다.jpg", "슬프다.jpg", "암담하다.jpg", "역겹다.jpg", "화나다.jpg",
-    "실망하다.jpg", "억울하다.jpg", "좌절하다.jpg", "참담하다.jpg", "증오하다.jpg", "질색하다.jpg"
-  ];
-  
-  drug_images = ["drug1.jpg", "drug2.jpg", "drug3.jpg", "drug4.jpg", "drug5.jpg", "drug6.jpg", "drug7.jpg"];
-  
-  // 2) 블록별 샘플링 개수 고정
-  total_trials = 24;
-  z_count = Math.round(total_trials * 0.58);  // 14
-  slash_count = total_trials - z_count;       // 10
-  positive_z = 7;
-  drug_z = z_count - positive_z;              // 7
-  neg_slash = slash_count;                     // 10
+  // 2) 블록별 샘플링 개수 고정 - 이미 선언된 변수 재사용
+  // total_trials, z_count, slash_count, positive_z, drug_z, neg_slash는 이미 선언되어 있음
   
   // 3) 비복원 추출 함수
   function strictSample(arr, n) {
@@ -1356,7 +1362,7 @@ function trial_1RoutineBegin(snapshot) {
     if ((trials.thisN >= 24)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = stimuli_pool[stim_index];
+    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
     image_stim.setImage(("images/" + stimulus_file));
     
@@ -1933,7 +1939,7 @@ function SetupRoutineRoutineBegin(snapshot) {
     const negative_sample_2 = strictSample(negative_images, neg_slash_2);
     
     // (5) stimuli_pool_2 전역 변수로 할당
-    let stimuli_pool_2 = [
+    SCIAT.stimuli_pool_2 = [
       ...positive_sample_2.map(img => [img, '긍정', 'z']),
       ...drug_sample_2.map(img => [img, '마약', 'z']),
       ...negative_sample_2.map(img => [img, '부정', '/'])
@@ -1952,11 +1958,11 @@ function SetupRoutineRoutineBegin(snapshot) {
     let valid = false;
     for (let i = 0; i < 1000; i++) {
       // Fisher-Yates shuffle
-      for (let j = stimuli_pool_2.length - 1; j > 0; j--) {
+      for (let j = SCIAT.stimuli_pool_2.length - 1; j > 0; j--) {
         const k = Math.floor(Math.random() * (j + 1));
-        [stimuli_pool_2[j], stimuli_pool_2[k]] = [stimuli_pool_2[k], stimuli_pool_2[j]];
+        [SCIAT.stimuli_pool_2[j], SCIAT.stimuli_pool_2[k]] = [SCIAT.stimuli_pool_2[k], SCIAT.stimuli_pool_2[j]];
       }
-      if (isValidSequence(stimuli_pool_2)) {
+      if (isValidSequence(SCIAT.stimuli_pool_2)) {
         valid = true;
         break;
       }
@@ -2050,7 +2056,7 @@ function trial_2RoutineBegin(snapshot) {
     if ((trials.thisN >= 24)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = stimuli_pool[stim_index];
+    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
     image_stim.setImage(("images/" + stimulus_file));
     
@@ -2500,7 +2506,7 @@ function trial_3RoutineBegin(snapshot) {
     if ((trials.thisN >= 24)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = stimuli_pool[stim_index];
+    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
     image_stim.setImage(("images/" + stimulus_file));
     
@@ -3110,7 +3116,7 @@ function trial_4RoutineBegin(snapshot) {
     if ((trials.thisN >= 24)) {
         continueRoutine = false;
     }
-    [stimulus_file, stim_category] = stimuli_pool[stim_index];
+    [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
     image_stim.setImage(("images/" + stimulus_file));
     
