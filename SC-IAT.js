@@ -1,50 +1,108 @@
 ﻿/*************** 
- * Sc-Iat *
+ * SC-IAT - 구조 최적화 버전 *
  ***************/
 
-// ES6 모듈 로딩 시도, 실패 시 전역 객체에서 로드
+// ===== 설정 및 상수 =====
+const CONFIG = {
+    EXPERIMENT_NAME: 'SC-IAT',
+    PARTICIPANT_ID_LENGTH: 6,
+    SESSION_ID: '001',
+    IMAGE_PATH: 'images/',
+    DEFAULT_IMAGE: 'default.jpg',
+    POSITIVE_KEYS: ['z', 'Z'],
+    NEGATIVE_KEYS: ['slash', '/'],
+    DEFAULT_DURATION: 0.5,
+    FEEDBACK_DURATION: 1.0,
+    WELCOME_MESSAGE: `
+        <div style="font-size:1.3em; text-align:center; padding:30px;">
+            <b>안녕하세요!</b><br><br>
+            본 실험에 참여해주셔서 감사합니다.<br>
+            본 실험은 <b>암묵적 연합 검사(SC-IAT)</b>입니다.<br><br>
+            안내에 따라 실험을 진행해 주세요.<br>
+            준비가 되셨으면 아래의 <b>확인</b> 버튼을 눌러주세요.
+        </div>
+    `
+};
+
+// ===== 유틸리티 함수들 =====
+const Utils = {
+    // 안전한 이미지 설정
+    setImageSafely(imageStim, imagePath) {
+        try {
+            imageStim.setImage('images/' + imagePath);
+        } catch (error) {
+            console.error('이미지 로딩 실패:', imagePath, error);
+            imageStim.setImage('images/default.jpg');
+        }
+    },
+    
+    // 모달 표시
+    showModal(message) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center;
+                justify-content: center; z-index: 9999;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 20px; border-radius: 10px;
+                max-width: 500px; text-align: center;
+            `;
+            content.innerHTML = message;
+            
+            const button = document.createElement('button');
+            button.textContent = '확인';
+            button.style.cssText = `
+                margin-top: 20px; padding: 10px 20px; background: #007bff;
+                color: white; border: none; border-radius: 5px; cursor: pointer;
+            `;
+            button.onclick = () => {
+                document.body.removeChild(modal);
+                resolve();
+            };
+            
+            content.appendChild(button);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        });
+    }
+};
+
+// ===== 모듈 로딩 =====
 let core, data, sound, util, visual, hardware;
 let PsychoJS, TrialHandler, MultiStairHandler, Scheduler;
 
-try {
-    const module = await import('./lib/psychojs-2024.2.4.js');
-    core = module.core;
-    data = module.data;
-    sound = module.sound;
-    util = module.util;
-    visual = module.visual;
-    hardware = module.hardware;
-    PsychoJS = core.PsychoJS;
-    TrialHandler = data.TrialHandler;
-    MultiStairHandler = data.MultiStairHandler;
-    Scheduler = util.Scheduler;
-} catch (error) {
-    console.warn('ES6 모듈 로딩 실패, 전역 객체에서 로드:', error);
-    // 전역 객체에서 로드
-    core = window.core || {};
-    data = window.data || {};
-    sound = window.sound || {};
-    util = window.util || {};
-    visual = window.visual || {};
-    hardware = window.hardware || {};
-    PsychoJS = window.PsychoJS || core.PsychoJS;
-    TrialHandler = window.TrialHandler || data.TrialHandler;
-    MultiStairHandler = window.MultiStairHandler || data.MultiStairHandler;
-    Scheduler = window.Scheduler || util.Scheduler;
-}
+// 모듈 로딩
+const modules = await Utils.loadModules();
+core = modules.core;
+data = modules.data;
+sound = modules.sound;
+util = modules.util;
+visual = modules.visual;
+hardware = modules.hardware;
+PsychoJS = modules.PsychoJS;
+TrialHandler = modules.TrialHandler;
+MultiStairHandler = modules.MultiStairHandler;
+Scheduler = modules.Scheduler;
+
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
 
-
-// store info about the experiment session:
-let expName = 'SC-IAT';  // from the Builder filename that created this script
+// ===== 실험 정보 =====
+let expName = CONFIG.EXPERIMENT_NAME;
 let expInfo = {
-    'participant': `${util.pad(Number.parseFloat(util.randint(0, 999999)).toFixed(0), 6)}`,
-    'session': '001',
+    'participant': `${util.pad(Number.parseFloat(util.randint(0, 999999)).toFixed(0), CONFIG.PARTICIPANT_ID_LENGTH)}`,
+    'session': CONFIG.SESSION_ID,
 };
 
-// 전역 변수 네임스페이스 보호 (다른 스크립트와의 충돌 방지)
+// ===== 전역 변수 =====
+let currentLoop = null;
+
+// 전역 변수 네임스페이스 보호
 window.SCIAT = {
     positive_images: null,
     negative_images: null,
@@ -59,41 +117,17 @@ window.SCIAT = {
     drug_sample: null,
     negative_sample: null,
     stimuli_pool: null,
-    stimuli_pool_2: null
+    stimuli_pool_2: null,
+    currentLoop: null
 };
 
-// Start code blocks for 'Before Experiment'
-// init psychoJS:
-const psychoJS = new PsychoJS({
-  debug: true
-});
-// 실험 시작 전 참가자에게 간단한 안내 메시지를 표시하는 함수입니다.
-// 이 함수는 실험이 시작되기 전에 한 번 호출되어야 하며, 확인을 누르면 실험이 계속 진행됩니다.
-function showWelcomeMessage() {
-    return new Promise((resolve) => {
-        // 안내 메시지 내용 (한국어)
-        const message = `
-        <div style="font-size:1.3em; text-align:center; padding:30px;">
-            <b>안녕하세요!</b><br><br>
-            본 실험에 참여해주셔서 감사합니다.<br>
-            본 실험은 <b>암묵적 연합 검사(SC-IAT)</b>입니다.<br><br>
-            안내에 따라 실험을 진행해 주세요.<br>
-            준비가 되셨으면 아래의 <b>확인</b> 버튼을 눌러주세요.
-        </div>
-        `;
+// ===== 실험 초기화 =====
+const psychoJS = new PsychoJS({ debug: true });
 
-        // 모달 생성
-        const modal = document.createElement('div');
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100vw';
-        modal.style.height = '100vh';
-        modal.style.background = 'rgba(0,0,0,0.5)';
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.zIndex = '9999';
+// 실험 시작 전 안내 메시지
+async function showWelcomeMessage() {
+    return Utils.showModal(CONFIG.WELCOME_MESSAGE);
+}
 
         const box = document.createElement('div');
         box.style.background = 'white';
@@ -121,8 +155,8 @@ function showWelcomeMessage() {
         box.appendChild(btn);
         modal.appendChild(box);
         document.body.appendChild(modal);
-    });
-}
+   
+
 
 // PsychoJS 초기화 후, 실험 시작 전에 안내 메시지를 보여줍니다.
 psychoJS.schedule(async function() {
@@ -222,7 +256,8 @@ psychoJS.start({
 psychoJS.experimentLogger.setLevel(core.Logger.ServerLevel.INFO);
 
 async function updateInfo() {
-  currentLoop = psychoJS.experiment;  // right now there are no loops
+  SCIAT.currentLoop = psychoJS.experiment;  // right now there are no loops
+  currentLoop = SCIAT.currentLoop;  // 전역 변수도 설정
   expInfo['date'] = util.MonotonicClock.getDateStr();  // add a simple timestamp
   expInfo['expName'] = expName;
   expInfo['psychopyVersion'] = '2024.2.4';
@@ -520,19 +555,7 @@ async function experimentInit() {
   // 2) 블록별 샘플링 개수 고정 - 이미 선언된 변수 재사용
   // total_trials, z_count, slash_count, positive_z, drug_z, neg_slash는 이미 선언되어 있음
   
-  // 3) 비복원 추출 함수
-  function strictSample(arr, n) {
-    if (n < 0 || n > arr.length) {
-      throw new Error(`요청 ${n}개, 가능 ${arr.length}개`);
-    }
-    let arrCopy = [...arr];
-    let result = [];
-    for (let i = 0; i < n; i++) {
-      const idx = Math.floor(Math.random() * arrCopy.length);
-      result.push(arrCopy.splice(idx, 1)[0]);
-    }
-    return result;
-  }
+  // 3) 비복원 추출 함수 (이미 위에서 정의됨)
   
   // Initialize components for Routine "SetupRoutine"
   SetupRoutineClock = new util.Clock();
@@ -978,8 +1001,8 @@ function IntroRoutineEnd(snapshot) {
     }
     psychoJS.experiment.addData('Intro.stopped', globalClock.getTime());
     // update the trial handler
-    if (currentLoop instanceof MultiStairHandler) {
-      currentLoop.addResponse(key_resp_intro.corr, level);
+    if (SCIAT.currentLoop instanceof MultiStairHandler) {
+      SCIAT.currentLoop.addResponse(key_resp_intro.corr, level);
     }
     psychoJS.experiment.addData('key_resp_intro.keys', key_resp_intro.keys);
     if (typeof key_resp_intro.keys !== 'undefined') {  // we had a response
@@ -993,7 +1016,7 @@ function IntroRoutineEnd(snapshot) {
     routineTimer.reset();
     
     // Routines running outside a loop should always advance the datafile row
-    if (currentLoop === psychoJS.experiment) {
+    if (SCIAT.currentLoop === psychoJS.experiment) {
       psychoJS.experiment.nextEntry(snapshot);
     }
     return Scheduler.Event.NEXT;
@@ -1013,7 +1036,8 @@ function trialsLoopBegin(trialsLoopScheduler, snapshot) {
       seed: undefined, name: 'trials'
     });
     psychoJS.experiment.addLoop(trials); // add the loop to the experiment
-    currentLoop = trials;  // we're now the current loop
+    SCIAT.currentLoop = trials;  // we're now the current loop
+    currentLoop = SCIAT.currentLoop;  // 전역 변수도 설정
     
     // Schedule all the trials in the trialList:
     for (const thisTrial of trials) {
@@ -1037,9 +1061,10 @@ async function trialsLoopEnd() {
   psychoJS.experiment.removeLoop(trials);
   // update the current loop from the ExperimentHandler
   if (psychoJS.experiment._unfinishedLoops.length>0)
-    currentLoop = psychoJS.experiment._unfinishedLoops.at(-1);
+    SCIAT.currentLoop = psychoJS.experiment._unfinishedLoops.at(-1);
   else
-    currentLoop = psychoJS.experiment;  // so we use addData from the experiment
+    SCIAT.currentLoop = psychoJS.experiment;  // so we use addData from the experiment
+  currentLoop = SCIAT.currentLoop;  // 전역 변수도 설정
   return Scheduler.Event.NEXT;
 }
 
@@ -1075,7 +1100,8 @@ function blockLoopLoopBegin(blockLoopLoopScheduler, snapshot) {
       seed: undefined, name: 'blockLoop'
     });
     psychoJS.experiment.addLoop(blockLoop); // add the loop to the experiment
-    currentLoop = blockLoop;  // we're now the current loop
+    SCIAT.currentLoop = blockLoop;  // we're now the current loop
+    currentLoop = SCIAT.currentLoop;  // 전역 변수도 설정
     
     // Schedule all the trials in the trialList:
     for (const thisBlockLoop of blockLoop) {
@@ -1108,7 +1134,8 @@ function trials_2LoopBegin(trials_2LoopScheduler, snapshot) {
       seed: undefined, name: 'trials_2'
     });
     psychoJS.experiment.addLoop(trials_2); // add the loop to the experiment
-    currentLoop = trials_2;  // we're now the current loop
+    SCIAT.currentLoop = trials_2;  // we're now the current loop
+    currentLoop = SCIAT.currentLoop;  // 전역 변수도 설정
     
     // Schedule all the trials in the trialList:
     for (const thisTrial_2 of trials_2) {
@@ -3590,38 +3617,20 @@ function EndRoutineEnd(snapshot) {
 function importConditions(snapshot) {
   return async function () {
     try {
-      // snapshot에서 loopName을 확인하여 올바른 루프를 찾습니다
-      let loopToUse = null;
+      // 루프 매핑 객체
+      const loopMap = {
+        'trialsLoop': trialsLoop,
+        'blockLoop': blockLoop,
+        'trials_2Loop': trials_2Loop,
+        'trials_3Loop': trials_3Loop,
+        'blockLoop_2': blockLoop_2,
+        'trials_4Loop': trials_4Loop
+      };
       
-      if (snapshot && snapshot.loopName) {
-        // snapshot의 loopName에 따라 적절한 루프를 선택
-        switch (snapshot.loopName) {
-          case 'trialsLoop':
-            loopToUse = trialsLoop;
-            break;
-          case 'blockLoop':
-            loopToUse = blockLoop;
-            break;
-          case 'trials_2Loop':
-            loopToUse = trials_2Loop;
-            break;
-          case 'trials_3Loop':
-            loopToUse = trials_3Loop;
-            break;
-          case 'blockLoop_2':
-            loopToUse = blockLoop_2;
-            break;
-          case 'trials_4Loop':
-            loopToUse = trials_4Loop;
-            break;
-          default:
-            loopToUse = currentLoop; // 기본값
-        }
-      } else {
-        loopToUse = currentLoop; // 기본값
-      }
+      // 루프 선택
+      const loopToUse = snapshot?.loopName ? loopMap[snapshot.loopName] || SCIAT.currentLoop : SCIAT.currentLoop;
       
-      if (loopToUse && typeof loopToUse.getCurrentTrial === 'function') {
+      if (loopToUse?.getCurrentTrial) {
         psychoJS.importAttributes(loopToUse.getCurrentTrial());
       } else {
         console.warn('importConditions: 유효한 루프를 찾을 수 없습니다');
