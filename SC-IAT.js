@@ -6,9 +6,9 @@
 const isBrowser = typeof window !== 'undefined';
 const isPsychoJSLoaded = () => {
     return typeof window.PsychoJS !== 'undefined' && 
+           typeof window.PsychoJS === 'function' &&
            typeof window.core !== 'undefined' && 
-           typeof window.visual !== 'undefined' &&
-           typeof window.PsychoJS === 'function';
+           typeof window.visual !== 'undefined';
 };
 
 // ===== 설정 및 상수 =====
