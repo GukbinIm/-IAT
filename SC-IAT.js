@@ -2,10 +2,36 @@
  * Sc-Iat *
  ***************/
 
-import { core, data, sound, util, visual, hardware } from './lib/psychojs-2024.2.4.js';
-const { PsychoJS } = core;
-const { TrialHandler, MultiStairHandler } = data;
-const { Scheduler } = util;
+// ES6 모듈 로딩 시도, 실패 시 전역 객체에서 로드
+let core, data, sound, util, visual, hardware;
+let PsychoJS, TrialHandler, MultiStairHandler, Scheduler;
+
+try {
+    const module = await import('./lib/psychojs-2024.2.4.js');
+    core = module.core;
+    data = module.data;
+    sound = module.sound;
+    util = module.util;
+    visual = module.visual;
+    hardware = module.hardware;
+    PsychoJS = core.PsychoJS;
+    TrialHandler = data.TrialHandler;
+    MultiStairHandler = data.MultiStairHandler;
+    Scheduler = util.Scheduler;
+} catch (error) {
+    console.warn('ES6 모듈 로딩 실패, 전역 객체에서 로드:', error);
+    // 전역 객체에서 로드
+    core = window.core || {};
+    data = window.data || {};
+    sound = window.sound || {};
+    util = window.util || {};
+    visual = window.visual || {};
+    hardware = window.hardware || {};
+    PsychoJS = window.PsychoJS || core.PsychoJS;
+    TrialHandler = window.TrialHandler || data.TrialHandler;
+    MultiStairHandler = window.MultiStairHandler || data.MultiStairHandler;
+    Scheduler = window.Scheduler || util.Scheduler;
+}
 //some handy aliases as in the psychopy scripts;
 const { abs, sin, cos, PI: pi, sqrt } = Math;
 const { round } = util;
@@ -2058,7 +2084,14 @@ function trial_2RoutineBegin(snapshot) {
     }
     [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
-    image_stim.setImage(("images/" + stimulus_file));
+    // 이미지 로딩 오류 방지
+    try {
+        image_stim.setImage(("images/" + stimulus_file));
+    } catch (error) {
+        console.error('이미지 로딩 실패:', stimulus_file, error);
+        // 기본 이미지로 대체
+        image_stim.setImage("images/default.jpg");
+    }
     
     psychoJS.experiment.addData('trial_2.started', globalClock.getTime());
     trial_2MaxDuration = null
@@ -2508,7 +2541,14 @@ function trial_3RoutineBegin(snapshot) {
     }
     [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
-    image_stim.setImage(("images/" + stimulus_file));
+    // 이미지 로딩 오류 방지
+    try {
+        image_stim.setImage(("images/" + stimulus_file));
+    } catch (error) {
+        console.error('이미지 로딩 실패:', stimulus_file, error);
+        // 기본 이미지로 대체
+        image_stim.setImage("images/default.jpg");
+    }
     
     psychoJS.experiment.addData('trial_3.started', globalClock.getTime());
     trial_3MaxDuration = null
@@ -3118,7 +3158,14 @@ function trial_4RoutineBegin(snapshot) {
     }
     [stimulus_file, stim_category] = SCIAT.stimuli_pool[stim_index];
     stim_index += 1;
-    image_stim.setImage(("images/" + stimulus_file));
+    // 이미지 로딩 오류 방지
+    try {
+        image_stim.setImage(("images/" + stimulus_file));
+    } catch (error) {
+        console.error('이미지 로딩 실패:', stimulus_file, error);
+        // 기본 이미지로 대체
+        image_stim.setImage("images/default.jpg");
+    }
     
     psychoJS.experiment.addData('trial_4.started', globalClock.getTime());
     trial_4MaxDuration = null
@@ -3540,11 +3587,50 @@ function EndRoutineEnd(snapshot) {
   }
 }
 
-function importConditions(currentLoop) {
+function importConditions(snapshot) {
   return async function () {
-    psychoJS.importAttributes(currentLoop.getCurrentTrial());
+    try {
+      // snapshot에서 loopName을 확인하여 올바른 루프를 찾습니다
+      let loopToUse = null;
+      
+      if (snapshot && snapshot.loopName) {
+        // snapshot의 loopName에 따라 적절한 루프를 선택
+        switch (snapshot.loopName) {
+          case 'trialsLoop':
+            loopToUse = trialsLoop;
+            break;
+          case 'blockLoop':
+            loopToUse = blockLoop;
+            break;
+          case 'trials_2Loop':
+            loopToUse = trials_2Loop;
+            break;
+          case 'trials_3Loop':
+            loopToUse = trials_3Loop;
+            break;
+          case 'blockLoop_2':
+            loopToUse = blockLoop_2;
+            break;
+          case 'trials_4Loop':
+            loopToUse = trials_4Loop;
+            break;
+          default:
+            loopToUse = currentLoop; // 기본값
+        }
+      } else {
+        loopToUse = currentLoop; // 기본값
+      }
+      
+      if (loopToUse && typeof loopToUse.getCurrentTrial === 'function') {
+        psychoJS.importAttributes(loopToUse.getCurrentTrial());
+      } else {
+        console.warn('importConditions: 유효한 루프를 찾을 수 없습니다');
+      }
+    } catch (error) {
+      console.error('importConditions 오류:', error);
+    }
     return Scheduler.Event.NEXT;
-    };
+  };
 }
 
 async function quitPsychoJS(message, isCompleted) {
